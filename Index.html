@@ -726,7 +726,9 @@ LEVELS.push({
     targets: [
         { x: 350, y: 250, w: 90, h: 40, angle: 0 }
     ],
-    carStart: { x: 80, y: 400, angle: 0 }
+    // Colocamos el coche de inicio más alejado del muro izquierdo para evitar choques iniciales
+    // al cargar el nivel (la longitud del vehículo se amplió recientemente).
+    carStart: { x: 120, y: 400, angle: 0 }
 });
 
 // Nivel 4: aparcamiento paralelo con muchos coches; hueco ampliado y añadido un segundo
