@@ -1,0 +1,1811 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Parking Man Mejorado</title>
+    <style>
+        :root {
+            /* Color principal para botones y acentos */
+            --accent-color: #f39c12;
+            --accent-dark: #d35400;
+            --glass: rgba(20, 20, 20, 0.9);
+        }
+
+        /* Reset básico */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            /* Fondo base del juego: cambiamos a un gris claro para simular asfalto iluminado */
+            background: #e4e4e4;
+            font-family: 'Segoe UI', sans-serif;
+            color: #eee;
+            touch-action: none; /* evita scroll y zoom por defecto */
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* El lienzo donde se dibuja el juego ocupa toda la pantalla */
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* Capa de interfaz de usuario, encima del canvas */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 5;
+        }
+
+        /* Barra superior del HUD para estadísticas y controles */
+        .hud-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.25rem 0.5rem;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            pointer-events: auto;
+        }
+
+        .hud-stats {
+            font-family: monospace;
+            font-size: 0.85rem;
+            text-shadow: 1px 1px 2px black;
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+        }
+
+        .hud-stats div {
+            line-height: 1;
+        }
+
+        /* Oculta las estadísticas del HUD que ya no se usan (velocidad, marcha y puntuación) */
+        #speed,
+        #gear-info,
+        #score-time-hud,
+        #score-quality-hud,
+        #score-total-hud {
+            display: none !important;
+        }
+
+        /* Indicador de nivel */
+        .level-display {
+            font-size: 1rem;
+            font-weight: bold;
+            color: var(--accent-color);
+            text-shadow: 1px 1px 2px black;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+        }
+
+        /* Zona inferior con controles */
+        .controls-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 0.3rem;
+            padding-bottom: 0.8rem;
+            pointer-events: auto;
+        }
+
+        /* Contenedor del volante */
+        /* Ahora se incrementa un 80% respecto al tamaño ajustado anterior (120px → 216px).
+           El fondo se oscurece para mejorar el contraste sobre el suelo claro. */
+        .steering-container {
+            width: 216px;
+            height: 216px;
+            position: relative;
+            background: rgba(0,0,0,0.7);
+            border-radius: 50%;
+        }
+
+        #steering-wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            /* Mantenemos el relleno oscuro del volante */
+            background: radial-gradient(circle, #444 30%, #111 100%);
+            /* El aro exterior siempre tiene el color de acento para que ambos círculos sean amarillos */
+            border: 5px solid var(--accent-color);
+            position: relative;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            transform: rotate(0deg);
+            transition: border-color 0.2s;
+        }
+
+        /* Círculo interior del volante */
+        #steering-wheel::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 60%;
+            height: 60%;
+            border: 4px solid var(--accent-color);
+            border-radius: 50%;
+        }
+        /* Ocultamos la antigua marca superior */
+        #steering-wheel::after {
+            display: none;
+        }
+        #steering-wheel.active {
+            border-color: var(--accent-color);
+        }
+        /* Eliminamos las líneas radiales del volante para dejar solo los dos círculos concéntricos */
+
+        /* Capa de resaltado del volante: esta capa cubrirá el volante cuando se esté
+           interactuando con él. La máscara radial oculta el área central para
+           que sólo se ilumine el anillo exterior entre los dos círculos concéntricos.
+           La opacidad se controlará desde el código JavaScript para mostrarla
+           únicamente mientras se detecte un toque sobre el volante. */
+        #wheel-highlight {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            /* máscara radial para dibujar un anillo: la zona interior (hasta el 35 %) es
+               transparente y no muestra el gradiente, mientras que el anillo exterior
+               (del 45 % al 100 %) queda visible. Entre el 35 % y el 45 % realizamos
+               una transición suave para evitar bordes duros. */
+            mask-image: radial-gradient(circle at center, transparent 0 35%, black 45% 100%);
+            -webkit-mask-image: radial-gradient(circle at center, transparent 0 35%, black 45% 100%);
+        }
+
+        /* Controles derechos: marchas y pedales */
+        .right-controls {
+            display: flex;
+            align-items: flex-end;
+            gap: 0.5rem;
+        }
+
+        /* Selector de marchas */
+        .gear-shift {
+            display: flex;
+            flex-direction: column;
+            background: var(--glass);
+            border-radius: 8px;
+            padding: 0.1rem;
+            margin-right: 0.3rem;
+        }
+
+        /* Botones de marchas reducidos al 60 % */
+        .gear-btn {
+            width: 24px;
+            height: 19px;
+            background: #222;
+            color: #777;
+            font-size: 0.7rem;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 2px solid #444;
+            margin: 0.1rem;
+            border-radius: 6px;
+            transition: background-color 0.1s, color 0.1s, box-shadow 0.1s;
+        }
+        .gear-btn.active {
+            background: var(--accent-color);
+            color: #000;
+            box-shadow: 0 0 10px var(--accent-color);
+        }
+
+        /* Pedales más anchos: aumentamos su anchura un 70 % respecto a la versión reducida.
+           La altura permanece constante. */
+        .pedal {
+            width: 51px; /* 30px * 1.7 ≈ 51 */
+            height: 65px; /* altura aumentada un 50 % */
+            /* Pedales oscuros para contrastar con el fondo claro */
+            background: linear-gradient(to bottom, #333, #000);
+            border: 3px solid #666;
+            border-radius: 8px 8px 20px 20px;
+            position: relative;
+            transition: transform 0.05s, background 0.1s;
+        }
+        .pedal:active,
+        .pedal.pressed {
+            /* Aspecto pulsado para los pedales: ligeramente más oscuro */
+            background: linear-gradient(to bottom, #222, #000);
+            transform: translateY(6px);
+        }
+
+        /* Agrupación de pedal y marcha: organiza un botón de marcha encima del pedal. */
+        .pedal-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        /* Ajusta el tamaño de los botones de marcha cuando están encima de los pedales. */
+        .pedal-group .gear-btn {
+            width: 51px;
+            height: 28px;
+            font-size: 0.7rem;
+            border-radius: 6px;
+        }
+
+        /* Etiquetas en los pedales */
+        #brake-pedal::before,
+        #gas-pedal::before {
+            position: absolute;
+            bottom: 0.3rem;
+            width: 100%;
+            text-align: center;
+            font-size: 0.4rem;
+            color: #aaa;
+            letter-spacing: 1px;
+        }
+        #brake-pedal::before { content: 'FRENO'; }
+        #gas-pedal::before { content: 'ACELERA'; }
+
+        /* Pantallas superpuestas: inicio, game over, win */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            pointer-events: auto;
+            text-align: center;
+        }
+        .hidden { display: none !important; }
+
+        h1 {
+            font-size: 2.3rem;
+            color: var(--accent-color);
+            margin: 0 0 0.5rem 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        p {
+            color: #ccc;
+            max-width: 90%;
+            line-height: 1.4;
+            margin-bottom: 2rem;
+        }
+
+        .big-btn {
+            background: var(--accent-color);
+            color: #000;
+            font-size: 0.84rem;
+            padding: 0.45rem 1.5rem;
+            border-radius: 50px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(243, 156, 18, 0.5);
+            touch-action: manipulation;
+            transition: transform 0.1s;
+        }
+        .big-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Estrellas de puntuación */
+        .star-rating {
+            font-size: 2.5rem;
+            color: #444;
+            margin: 1rem 0;
+        }
+        .star-rating span.filled {
+            color: gold;
+        }
+
+        /* Responsividad para pantallas pequeñas */
+        @media (max-width: 600px) {
+            /* Ajustamos el tamaño de los controles al 60 % también en pantallas pequeñas */
+            .steering-container {
+                width: 162px;
+                height: 162px;
+            }
+            /* Botones de marcha en pantallas pequeñas (aquellos fuera de pedal-group) */
+            .gear-btn {
+                width: 52px;
+                height: 32px;
+                font-size: 0.9rem;
+            }
+            /* Pedales en pantallas pequeñas: incrementamos su anchura un 70 % (40 → 68) y su altura un 50 % */
+            .pedal {
+                width: 68px;
+                height: 86px;
+            }
+            /* Botones de marcha dentro de los grupos de pedales en pantallas pequeñas */
+            .pedal-group .gear-btn {
+                width: 68px;
+                height: 34px;
+                font-size: 1rem;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+            .big-btn {
+                font-size: 1.2rem;
+                padding: 0.6rem 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="ui-layer">
+        <div class="hud-top">
+            <!-- Fila superior de información: solo cronómetro, velocímetro y nivel -->
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <!-- Contenedor de estadísticas minimalista: sólo el temporizador -->
+                <div class="hud-stats">
+                    <div id="timer">0.0s</div>
+                </div>
+                <!-- Pequeño velocímetro gráfico: aumentamos ligeramente su tamaño para una mejor visibilidad -->
+                <canvas id="speedometer" width="100" height="100" style="width:70px;height:70px;"></canvas>
+                <!-- Muestra el número de nivel actual -->
+                <div id="level-display" class="level-display">Nivel 1</div>
+            </div>
+        </div>
+
+        <div class="controls-area">
+            <div class="steering-container" id="wheel-zone">
+                <div id="steering-wheel">
+                    <!-- Capa de resaltado del volante: se mostrará como un gradiente cuando se toque el volante -->
+                    <div id="wheel-highlight"></div>
+                </div>
+            </div>
+
+            <div class="right-controls">
+                <!-- Grupo de freno: marcha atrás encima del pedal (a la izquierda) -->
+                <div class="pedal-group">
+                    <div class="gear-btn" id="gear-r">R</div>
+                    <div class="pedal" id="brake-pedal"></div>
+                </div>
+                <!-- Grupo de acelerador: marcha adelante encima del pedal (a la derecha) -->
+                <div class="pedal-group">
+                    <div class="gear-btn active" id="gear-d">D</div>
+                    <div class="pedal" id="gas-pedal"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pantalla inicial -->
+    <div id="start-screen" class="screen">
+        <h1>Parking Man</h1>
+        <p>Conduce hasta la zona verde sin tocar obstáculos.<br>Usa el volante, la marcha correcta y los pedales.</p>
+        <button class="big-btn" id="start-btn">ARRANCAR MOTOR</button>
+    </div>
+
+    <!-- Pantalla de choque -->
+    <div id="gameover-screen" class="screen hidden">
+        <h1 style="color: #e74c3c">¡GOLPE!</h1>
+        <p>Has rozado un obstáculo o muro.</p>
+        <button class="big-btn" id="retry-btn">REINTENTAR</button>
+    </div>
+
+    <!-- Pantalla de victoria -->
+    <div id="success-screen" class="screen hidden">
+        <h1 style="color: #2ecc71">APARCADO</h1>
+        <div class="star-rating" id="stars-container"></div>
+        <div id="score-text" style="font-family: monospace; margin-bottom: 1rem;"></div>
+        <!-- Mostramos también la puntuación acumulada en esta pantalla -->
+        <div id="cumulative-score" style="font-family: monospace; margin-bottom: 1rem;"></div>
+        <button class="big-btn" id="next-btn">REPETIR</button>
+    </div>
+
+    <!-- Pantalla final al completar todos los niveles -->
+    <div id="end-screen" class="screen hidden">
+        <h1 style="color: #2ecc71">¡JUEGO COMPLETADO!</h1>
+        <p>Has superado todos los niveles.</p>
+        <!-- Mostramos la puntuación total en la pantalla final -->
+        <div id="final-score-display" style="font-family: monospace; margin-bottom: 0.5rem; color: var(--accent-color);"></div>
+        <!-- Desglose de puntuaciones por nivel -->
+        <div id="final-score-breakdown" style="font-family: monospace; margin-bottom: 1rem; max-height: 40vh; overflow-y: auto;"></div>
+        <button class="big-btn" id="restart-btn">REINICIAR</button>
+    </div>
+
+<script>
+// Sistema de audio robusto
+const AudioSys = {
+    ctx: null,
+    engineOsc: null,
+    engineGain: null,
+    sensorOsc: null,
+    sensorGain: null,
+    nextBeep: 0,
+    init: function() {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            if (!this.ctx) {
+                this.ctx = new AudioContext();
+            }
+            if (this.ctx.state === 'suspended') {
+                this.ctx.resume();
+            }
+            // motor
+            if (!this.engineOsc) {
+                this.engineOsc = this.ctx.createOscillator();
+                this.engineGain = this.ctx.createGain();
+                this.engineOsc.type = 'sawtooth';
+                this.engineOsc.frequency.value = 50;
+                this.engineGain.gain.value = 0.05;
+                this.engineOsc.connect(this.engineGain);
+                this.engineGain.connect(this.ctx.destination);
+                this.engineOsc.start();
+            }
+            // sensor
+            if (!this.sensorOsc) {
+                this.sensorOsc = this.ctx.createOscillator();
+                this.sensorGain = this.ctx.createGain();
+                this.sensorOsc.type = 'sine';
+                this.sensorOsc.frequency.value = 1000;
+                this.sensorGain.gain.value = 0;
+                this.sensorOsc.connect(this.sensorGain);
+                this.sensorGain.connect(this.ctx.destination);
+                this.sensorOsc.start();
+            }
+        } catch (e) {
+            console.warn('Audio disabled due to error:', e);
+        }
+    },
+    updateEngine: function(speedRatio) {
+        if (this.engineOsc && this.ctx) {
+            try {
+                this.engineOsc.frequency.setTargetAtTime(50 + (speedRatio * 200), this.ctx.currentTime, 0.1);
+            } catch (e) {}
+        }
+    },
+    beepSensor: function(dist) {
+        if (!this.ctx || !this.sensorGain) return;
+        if (dist > 150) {
+            this.sensorGain.gain.value = 0;
+            return;
+        }
+        const now = this.ctx.currentTime;
+        const interval = Math.max(0.15, dist / 500);
+        if (!this.nextBeep || now > this.nextBeep) {
+            try {
+                // beep
+                this.sensorGain.gain.setValueAtTime(0.08, now);
+                this.sensorGain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+                this.nextBeep = now + interval;
+            } catch (e) {}
+        }
+    }
+};
+
+// ------------------ Velocímetro gráfico ------------------
+// Referencias al lienzo del velocímetro y su contexto.  Se inicializan
+// una vez al cargar la página para reutilizarse en cada actualización.
+let speedometerCanvas = null;
+let speedometerCtx = null;
+
+/**
+ * Dibuja un velocímetro semicircular sencillo que muestra la velocidad actual.
+ * El velocímetro se compone de un arco de 270° con ticks y una aguja.
+ * @param {number} speed Velocidad del vehículo en unidades del juego.
+ */
+function drawSpeedometerGraphic(speed) {
+    if (!speedometerCtx || !speedometerCanvas) return;
+    const ctx = speedometerCtx;
+    const cw = speedometerCanvas.width;
+    const ch = speedometerCanvas.height;
+    ctx.clearRect(0, 0, cw, ch);
+    const cx = cw / 2;
+    const cy = ch / 2;
+    // radio para el arco (ligeramente más pequeño que el lienzo)
+    const radius = Math.min(cw, ch) / 2 - 5;
+    // dibuja un fondo oscuro para el velocímetro para que destaque sobre el HUD
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius + 4, 0, Math.PI * 2);
+    ctx.fill();
+    // dibuja la pista del velocímetro en un tono claro para destacar sobre el fondo oscuro
+    ctx.strokeStyle = varAccentColor().trim();
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    // arco de 270 grados desde 135° (3/4 de vuelta) hasta 405° (2.25 vueltas)
+    const startAng = Math.PI * 0.75;        // 135°
+    const endAng = Math.PI * 2.25;          // 405°
+    ctx.arc(cx, cy, radius, startAng, endAng);
+    ctx.stroke();
+    // dibuja marcas (ticks) alrededor del arco
+    const tickCount = 8;
+    for (let i = 0; i <= tickCount; i++) {
+        const ratio = i / tickCount;
+        const ang = startAng + (endAng - startAng) * ratio;
+        const innerR = radius - 5;
+        const outerR = radius;
+        const x1 = cx + innerR * Math.cos(ang);
+        const y1 = cy + innerR * Math.sin(ang);
+        const x2 = cx + outerR * Math.cos(ang);
+        const y2 = cy + outerR * Math.sin(ang);
+        ctx.strokeStyle = varAccentColor().trim();
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+    }
+    // calcula la posición de la aguja según la velocidad
+    const maxSpeed = 160;
+    const spdRatio = Math.max(0, Math.min(1, Math.abs(speed) / maxSpeed));
+    const pointerAng = startAng + (endAng - startAng) * spdRatio;
+    const pointerLength = radius - 8;
+    const px = cx + pointerLength * Math.cos(pointerAng);
+    const py = cy + pointerLength * Math.sin(pointerAng);
+    // dibuja la aguja
+    const accent = varAccentColor().trim();
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(px, py);
+    ctx.stroke();
+    // dibuja un pequeño círculo en el centro de la aguja
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+// Utilidades de física
+const Utils = {
+    toRad: (d) => d * Math.PI / 180,
+    rotatePoint: (p, cx, cy, angle) => {
+        const c = Math.cos(angle), s = Math.sin(angle);
+        const dx = p.x - cx, dy = p.y - cy;
+        return { x: cx + dx * c - dy * s, y: cy + dx * s + dy * c };
+    },
+    getOBB: (x, y, w, h, angle) => {
+        const corners = [
+            { x: x - w / 2, y: y - h / 2 },
+            { x: x + w / 2, y: y - h / 2 },
+            { x: x + w / 2, y: y + h / 2 },
+            { x: x - w / 2, y: y + h / 2 }
+        ];
+        const rotCorners = corners.map(p => Utils.rotatePoint(p, x, y, angle));
+        const axis = [
+            { x: rotCorners[1].x - rotCorners[0].x, y: rotCorners[1].y - rotCorners[0].y },
+            { x: rotCorners[2].x - rotCorners[1].x, y: rotCorners[2].y - rotCorners[1].y }
+        ];
+        axis.forEach(a => {
+            const l = Math.hypot(a.x, a.y);
+            a.x /= l;
+            a.y /= l;
+        });
+        return { p: rotCorners, axis: axis };
+    },
+    checkCollision: (obb1, obb2) => {
+        const axes = [...obb1.axis, ...obb2.axis];
+        for (let a of axes) {
+            let min1 = Infinity, max1 = -Infinity, min2 = Infinity, max2 = -Infinity;
+            for (let p of obb1.p) {
+                const d = p.x * a.x + p.y * a.y;
+                min1 = Math.min(min1, d);
+                max1 = Math.max(max1, d);
+            }
+            for (let p of obb2.p) {
+                const d = p.x * a.x + p.y * a.y;
+                min2 = Math.min(min2, d);
+                max2 = Math.max(max2, d);
+            }
+            if (max1 < min2 || max2 < min1) return false;
+        }
+        return true;
+    }
+};
+
+// Definición de niveles: cada nivel ahora incluye un array de huecos
+const LEVELS = [];
+
+// Constantes globales para el tamaño del vehículo y la distancia entre ejes.
+// Anchura del coche se mantiene igual, mientras que la longitud aumenta un 20% respecto al original (68).
+const CAR_W = 34;
+const CAR_L = 82; // 68 * 1.2 ≈ 81.6, redondeado a 82
+// Factor que determina la relación entre la mitad de la longitud y el eje delantero.
+// Calculado a partir del diseño original: (34 - 10) / 34 ≈ 0.70588.
+const WHEEL_BASE_RATIO = 24 / 34;
+
+// Nivel 1: aparcamiento frontal (vertical) con dos huecos
+LEVELS.push({
+    obstacles: [
+        // muros perimetrales
+        { x: 25, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 775, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 400, y: 25, w: 800, h: 50, c: '#555', type: 'wall' },
+        { x: 400, y: 775, w: 800, h: 50, c: '#555', type: 'wall' },
+        // vehículos estacionados (verticales)
+        { x: 320, y: 200, w: 40, h: 80, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 480, y: 200, w: 40, h: 80, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
+        // obstáculo circular (punto de referencia)
+        { x: 550, y: 500, w: 15, h: 15, c: '#f1c40f', type: 'circle' },
+        // obstáculos adicionales para aumentar la dificultad del primer nivel
+        { x: 200, y: 350, w: 85, h: 40, c: '#1abc9c', type: 'vehicle', angle: 0 },
+        { x: 600, y: 350, w: 85, h: 40, c: '#e67e22', type: 'vehicle', angle: 0 },
+        { x: 240, y: 650, w: 40, h: 80, c: '#e74c3c', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 560, y: 650, w: 40, h: 80, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 }
+    ],
+    // se mantiene la primera plaza como target para compatibilidad
+    target: { x: 400, y: 200, w: 42, h: 85, angle: -Math.PI/2 },
+    targets: [
+        { x: 400, y: 200, w: 42, h: 85, angle: -Math.PI/2 },
+        { x: 400, y: 600, w: 42, h: 85, angle: -Math.PI/2 }
+    ],
+    carStart: { x: 150, y: 550, angle: -Math.PI / 2 }
+});
+
+// Nivel 2: aparcamiento en batería con un solo hueco entre coches en fila. El jugador debe girar 90° para entrar en la plaza.
+LEVELS.push({
+    obstacles: [
+        // muros perimetrales
+        { x: 25, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 775, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 400, y: 25, w: 800, h: 50, c: '#555', type: 'wall' },
+        { x: 400, y: 775, w: 800, h: 50, c: '#555', type: 'wall' },
+        // Fila superior de coches estacionados perpendicularmente al carril (deja un hueco en x=350)
+        { x: 150, y: 250, w: 40, h: 80, c: '#1abc9c', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 250, y: 250, w: 40, h: 80, c: '#e67e22', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 450, y: 250, w: 40, h: 80, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 550, y: 250, w: 40, h: 80, c: '#e74c3c', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 650, y: 250, w: 40, h: 80, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
+        // Fila inferior de coches estacionados perpendicularmente (todos los huecos llenos)
+        { x: 150, y: 550, w: 40, h: 80, c: '#f1c40f', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 250, y: 550, w: 40, h: 80, c: '#16a085', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 350, y: 550, w: 40, h: 80, c: '#8e44ad', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 450, y: 550, w: 40, h: 80, c: '#d35400', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 550, y: 550, w: 40, h: 80, c: '#2980b9', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 650, y: 550, w: 40, h: 80, c: '#c0392b', type: 'vehicle', angle: -Math.PI/2 }
+    ],
+    // La plaza libre para aparcar está en la fila superior en x=350, y=250
+    target: { x: 350, y: 250, w: 42, h: 85, angle: -Math.PI/2 },
+    targets: [
+        { x: 350, y: 250, w: 42, h: 85, angle: -Math.PI/2 }
+    ],
+    // El coche comienza orientado hacia la derecha (0 radianes) en la entrada del carril
+    carStart: { x: 100, y: 400, angle: 0 }
+});
+
+// Nivel 3: un reto adicional con más obstáculos y dos huecos
+LEVELS.push({
+    // Aparcamiento paralelo en una calle con coches aparcados en ambas aceras.  La hilera superior
+    // tiene un hueco libre para aparcar en x≈350.  El coche se desplaza horizontalmente desde la
+    // izquierda y debe alinear el vehículo de manera paralela a la acera.
+    obstacles: [
+        // muros perimetrales
+        { x: 25, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 775, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 400, y: 25, w: 800, h: 50, c: '#555', type: 'wall' },
+        { x: 400, y: 775, w: 800, h: 50, c: '#555', type: 'wall' },
+        // hilera superior de coches aparcados paralelos (horizontales) dejando un hueco en x≈350
+        { x: 150, y: 250, w: 85, h: 40, c: '#1abc9c', type: 'vehicle', angle: 0 },
+        { x: 250, y: 250, w: 85, h: 40, c: '#e74c3c', type: 'vehicle', angle: 0 },
+        { x: 450, y: 250, w: 85, h: 40, c: '#f1c40f', type: 'vehicle', angle: 0 },
+        { x: 550, y: 250, w: 85, h: 40, c: '#8e44ad', type: 'vehicle', angle: 0 },
+        // hilera inferior de coches aparcados paralelos en la acera opuesta
+        { x: 150, y: 550, w: 85, h: 40, c: '#9b59b6', type: 'vehicle', angle: 0 },
+        { x: 250, y: 550, w: 85, h: 40, c: '#3498db', type: 'vehicle', angle: 0 },
+        { x: 350, y: 550, w: 85, h: 40, c: '#e67e22', type: 'vehicle', angle: 0 },
+        { x: 450, y: 550, w: 85, h: 40, c: '#2ecc71', type: 'vehicle', angle: 0 },
+        { x: 550, y: 550, w: 85, h: 40, c: '#c0392b', type: 'vehicle', angle: 0 }
+    ],
+    target: { x: 350, y: 250, w: 90, h: 40, angle: 0 },
+    targets: [
+        { x: 350, y: 250, w: 90, h: 40, angle: 0 }
+    ],
+    carStart: { x: 80, y: 400, angle: 0 }
+});
+
+// Nivel 4: aparcamiento paralelo con muchos coches; hueco ampliado y añadido un segundo
+LEVELS.push({
+    // Aparcamiento paralelo vertical en una calle estrecha.  Las aceras están a izquierda
+    // y derecha y cuentan con hileras de coches estacionados en vertical; hay un hueco
+    // libre en la hilera izquierda para aparcar.  El coche parte del extremo inferior
+    // de la calle orientado hacia arriba y debe maniobrar para entrar en el hueco.
+    obstacles: [
+        // muros perimetrales
+        { x: 25, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 775, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 400, y: 25, w: 800, h: 50, c: '#555', type: 'wall' },
+        { x: 400, y: 775, w: 800, h: 50, c: '#555', type: 'wall' },
+        // hilera izquierda de coches estacionados en vertical (paralelos a la calle)
+        { x: 250, y: 150, w: 40, h: 85, c: '#e74c3c', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 250, y: 250, w: 40, h: 85, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 250, y: 450, w: 40, h: 85, c: '#2ecc71', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 250, y: 550, w: 40, h: 85, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
+        // hilera derecha de coches estacionados en vertical
+        { x: 550, y: 150, w: 40, h: 85, c: '#1abc9c', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 550, y: 250, w: 40, h: 85, c: '#f39c12', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 550, y: 350, w: 40, h: 85, c: '#8e44ad', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 550, y: 450, w: 40, h: 85, c: '#c0392b', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 550, y: 550, w: 40, h: 85, c: '#e67e22', type: 'vehicle', angle: -Math.PI/2 },
+        // coches horizontales que estrechan la calle y obligan a maniobrar
+        { x: 400, y: 300, w: 85, h: 40, c: '#16a085', type: 'vehicle', angle: 0 },
+        { x: 400, y: 500, w: 85, h: 40, c: '#d35400', type: 'vehicle', angle: 0 }
+    ],
+    target: { x: 250, y: 350, w: 40, h: 90, angle: -Math.PI/2 },
+    targets: [
+        { x: 250, y: 350, w: 40, h: 90, angle: -Math.PI/2 }
+    ],
+    carStart: { x: 400, y: 700, angle: -Math.PI/2 }
+});
+
+// Nivel 5: aparcamiento frontal con huecos a izquierda y derecha y maniobras adicionales
+LEVELS.push({
+    // Aparcamiento paralelo en una calle con coches en ambas aceras y varios estrechamientos.
+    // La plaza libre está en la hilera izquierda.  El jugador debe avanzar desde el extremo
+    // inferior hacia arriba para realizar la maniobra de aparcado paralelo.
+    obstacles: [
+        // muros perimetrales
+        { x: 25, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 775, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 400, y: 25, w: 800, h: 50, c: '#555', type: 'wall' },
+        { x: 400, y: 775, w: 800, h: 50, c: '#555', type: 'wall' },
+        // hilera izquierda de coches verticales
+        { x: 200, y: 150, w: 40, h: 85, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 200, y: 250, w: 40, h: 85, c: '#e74c3c', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 200, y: 450, w: 40, h: 85, c: '#1abc9c', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 200, y: 550, w: 40, h: 85, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
+        // hilera derecha de coches verticales
+        { x: 600, y: 150, w: 40, h: 85, c: '#f39c12', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 600, y: 250, w: 40, h: 85, c: '#8e44ad', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 600, y: 350, w: 40, h: 85, c: '#c0392b', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 600, y: 450, w: 40, h: 85, c: '#2ecc71', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 600, y: 550, w: 40, h: 85, c: '#16a085', type: 'vehicle', angle: -Math.PI/2 },
+        // coches horizontales que estrechan la calle a distintas alturas
+        { x: 400, y: 200, w: 85, h: 40, c: '#f1c40f', type: 'vehicle', angle: 0 },
+        { x: 400, y: 400, w: 85, h: 40, c: '#2980b9', type: 'vehicle', angle: 0 },
+        { x: 400, y: 600, w: 85, h: 40, c: '#e67e22', type: 'vehicle', angle: 0 }
+    ],
+    target: { x: 200, y: 350, w: 40, h: 90, angle: -Math.PI/2 },
+    targets: [
+        { x: 200, y: 350, w: 40, h: 90, angle: -Math.PI/2 }
+    ],
+    carStart: { x: 400, y: 700, angle: -Math.PI/2 }
+});
+
+// Nivel 6: aparcamiento paralelo con tres huecos y pasillos estrechos (ajustado para ser más fácil)
+LEVELS.push({
+    obstacles: [
+        // muros perimetrales
+        { x: 25, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 775, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 400, y: 25, w: 800, h: 50, c: '#555', type: 'wall' },
+        { x: 400, y: 775, w: 800, h: 50, c: '#555', type: 'wall' },
+        // coches horizontales a los lados de los huecos, con tamaño reducido para ampliar el carril
+        { x: 250, y: 300, w: 70, h: 35, c: '#1abc9c', type: 'vehicle', angle: 0 },
+        { x: 550, y: 300, w: 70, h: 35, c: '#e67e22', type: 'vehicle', angle: 0 },
+        { x: 250, y: 500, w: 70, h: 35, c: '#9b59b6', type: 'vehicle', angle: 0 },
+        { x: 550, y: 500, w: 70, h: 35, c: '#16a085', type: 'vehicle', angle: 0 },
+        { x: 250, y: 200, w: 70, h: 35, c: '#2ecc71', type: 'vehicle', angle: 0 },
+        { x: 550, y: 200, w: 70, h: 35, c: '#f1c40f', type: 'vehicle', angle: 0 },
+        // obstáculos verticales que estrechan los accesos a los huecos, reducidos en tamaño y desplazados para dejar más espacio
+        { x: 320, y: 250, w: 30, h: 60, c: '#e74c3c', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 480, y: 250, w: 30, h: 60, c: '#8e44ad', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 320, y: 400, w: 30, h: 60, c: '#27ae60', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 480, y: 400, w: 30, h: 60, c: '#f39c12', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 320, y: 550, w: 30, h: 60, c: '#2980b9', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 480, y: 550, w: 30, h: 60, c: '#c0392b', type: 'vehicle', angle: -Math.PI/2 }
+    ],
+    // huecos de aparcamiento más amplios para facilitar el aparcado
+    target: { x: 400, y: 300, w: 110, h: 50, angle: 0 },
+    targets: [
+        { x: 400, y: 300, w: 110, h: 50, angle: 0 },
+        { x: 400, y: 500, w: 110, h: 50, angle: 0 },
+        { x: 400, y: 200, w: 110, h: 50, angle: 0 }
+    ],
+    carStart: { x: 400, y: 700, angle: 0 }
+});
+
+// Nivel 7: tres huecos verticales en hilera con pasos estrechos
+LEVELS.push({
+    obstacles: [
+        // muros perimetrales
+        { x: 25, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 775, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 400, y: 25, w: 800, h: 50, c: '#555', type: 'wall' },
+        { x: 400, y: 775, w: 800, h: 50, c: '#555', type: 'wall' },
+        // coches verticales adicionales que estrechan la trayectoria
+        { x: 260, y: 300, w: 40, h: 80, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 540, y: 300, w: 40, h: 80, c: '#e67e22', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 260, y: 500, w: 40, h: 80, c: '#1abc9c', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 540, y: 500, w: 40, h: 80, c: '#f39c12', type: 'vehicle', angle: -Math.PI/2 },
+        // coche horizontal central para complicar la maniobra
+        { x: 400, y: 400, w: 85, h: 40, c: '#2980b9', type: 'vehicle', angle: 0 }
+    ],
+    target: { x: 400, y: 200, w: 42, h: 85, angle: -Math.PI / 2 },
+    targets: [
+        { x: 400, y: 200, w: 42, h: 85, angle: -Math.PI / 2 },
+        { x: 400, y: 400, w: 42, h: 85, angle: -Math.PI / 2 },
+        { x: 400, y: 600, w: 42, h: 85, angle: -Math.PI / 2 }
+    ],
+    carStart: { x: 150, y: 700, angle: -Math.PI / 2 }
+});
+
+// Nivel 8: huecos horizontales dispersos con obstáculos mixtos
+LEVELS.push({
+    obstacles: [
+        // muros perimetrales
+        { x: 25, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 775, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 400, y: 25, w: 800, h: 50, c: '#555', type: 'wall' },
+        { x: 400, y: 775, w: 800, h: 50, c: '#555', type: 'wall' },
+        // coches horizontales dispersos
+        { x: 200, y: 250, w: 85, h: 40, c: '#8e44ad', type: 'vehicle', angle: 0 },
+        { x: 600, y: 550, w: 85, h: 40, c: '#f1c40f', type: 'vehicle', angle: 0 },
+        { x: 600, y: 250, w: 85, h: 40, c: '#c0392b', type: 'vehicle', angle: 0 },
+        { x: 200, y: 550, w: 85, h: 40, c: '#27ae60', type: 'vehicle', angle: 0 },
+        // coches verticales que limitan los accesos
+        { x: 400, y: 350, w: 40, h: 80, c: '#e74c3c', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 300, y: 450, w: 40, h: 80, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 500, y: 450, w: 40, h: 80, c: '#16a085', type: 'vehicle', angle: -Math.PI/2 }
+    ],
+    target: { x: 300, y: 200, w: 87, h: 42, angle: 0 },
+    targets: [
+        { x: 300, y: 200, w: 87, h: 42, angle: 0 },
+        { x: 500, y: 600, w: 87, h: 42, angle: 0 }
+    ],
+    carStart: { x: 400, y: 700, angle: 0 }
+});
+
+// Nivel 9: nivel final con huecos opuestos y obstáculos variados
+LEVELS.push({
+    obstacles: [
+        // muros perimetrales
+        { x: 25, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 775, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 400, y: 25, w: 800, h: 50, c: '#555', type: 'wall' },
+        { x: 400, y: 775, w: 800, h: 50, c: '#555', type: 'wall' },
+        // coches verticales en el centro
+        { x: 300, y: 400, w: 40, h: 80, c: '#8e44ad', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 500, y: 400, w: 40, h: 80, c: '#e67e22', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 300, y: 600, w: 40, h: 80, c: '#1abc9c', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 500, y: 200, w: 40, h: 80, c: '#c0392b', type: 'vehicle', angle: -Math.PI/2 },
+        // coches horizontales para dificultar la entrada
+        { x: 400, y: 300, w: 85, h: 40, c: '#27ae60', type: 'vehicle', angle: 0 },
+        { x: 400, y: 500, w: 85, h: 40, c: '#f39c12', type: 'vehicle', angle: 0 }
+    ],
+    target: { x: 200, y: 150, w: 42, h: 85, angle: -Math.PI / 2 },
+    targets: [
+        { x: 200, y: 150, w: 42, h: 85, angle: -Math.PI / 2 },
+        { x: 600, y: 650, w: 42, h: 85, angle: -Math.PI / 2 }
+    ],
+    // Colocamos el coche de inicio un poco más arriba para evitar colisiones con el muro inferior
+    carStart: { x: 400, y: 700, angle: -Math.PI / 2 }
+});
+
+class Game {
+    constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.state = 'MENU';
+        this.lastTime = 0;
+        this.input = { gas: 0, brake: 0, steer: 0, gear: 1 };
+        this.car = { x: 0, y: 0, angle: 0, speed: 0, steerAngle: 0 };
+        // Ajustamos el zoom inicial: antes estaba en 0.8 (zoom out).
+        // Ahora aplicamos un zoom in incrementando en un 80 %, resultando en 1.44.
+        this.cam = { zoom: 1.44 };
+        this.showGuides = true;
+        this.timer = 0;
+        this.inZone = false;
+        this.activeTargetIndex = -1; // índice del hueco en el que estamos
+        this.crashPoint = null; // punto de impacto para mostrar flecha en caso de choque
+        // variables para el volante
+        this.wheelRot = 0; // rotación actual del volante en grados
+        this.wheelOffset = 0; // desplazamiento inicial para el cálculo relativo
+        this.wheelActive = false;
+        // niveles
+        this.currentLevelIndex = 0;
+        this.level = LEVELS[this.currentLevelIndex];
+        // puntuación acumulada
+        this.totalScore = 0;
+        // puntuación por tiempo acumulada
+        this.totalTimeScore = 0;
+        // puntuación por aparcamiento acumulada
+        this.totalQualityScore = 0;
+        // listas con las puntuaciones de cada nivel por categoría
+        this.levelTimeScores = [];
+        this.levelQualityScores = [];
+        this.bindControls();
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        requestAnimationFrame(t => this.loop(t));
+    }
+
+    resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+    }
+
+    bindControls() {
+        const startBtn = document.getElementById('start-btn');
+        const startGame = (e) => {
+            if (e) e.preventDefault();
+            AudioSys.init();
+            // cuando se inicia, siempre volvemos al primer nivel
+            this.currentLevelIndex = 0;
+            this.level = LEVELS[this.currentLevelIndex];
+            // reiniciar las puntuaciones acumuladas
+            this.totalScore = 0;
+            this.totalTimeScore = 0;
+            this.totalQualityScore = 0;
+            this.levelTimeScores = [];
+            this.levelQualityScores = [];
+            // actualizar marcador
+            const timeEl = document.getElementById('score-time-hud');
+            const qualEl = document.getElementById('score-quality-hud');
+            const totalEl = document.getElementById('score-total-hud');
+            if (timeEl) timeEl.innerText = 'Tiempo: 0';
+            if (qualEl) qualEl.innerText = 'Aparcar: 0';
+            if (totalEl) totalEl.innerText = 'Total: 0';
+            this.resetLevel();
+            document.getElementById('start-screen').classList.add('hidden');
+            this.state = 'PLAY';
+        };
+        startBtn.addEventListener('click', startGame);
+        startBtn.addEventListener('touchstart', startGame, { passive: false });
+        // reinicio
+        const resetBtn = (id) => {
+            const el = document.getElementById(id);
+            el.addEventListener('click', () => this.resetLevel());
+            el.addEventListener('touchstart', (e) => { e.preventDefault(); this.resetLevel(); }, { passive: false });
+        };
+        resetBtn('retry-btn');
+        // el botón 'next' avanza al siguiente nivel en lugar de reiniciar el mismo
+        {
+            const el = document.getElementById('next-btn');
+            el.addEventListener('click', () => this.nextLevel());
+            el.addEventListener('touchstart', (e) => { e.preventDefault(); this.nextLevel(); }, { passive: false });
+        }
+        // botón de reinicio en la pantalla final
+        {
+            const el = document.getElementById('restart-btn');
+            if (el) {
+                const restart = (e) => {
+                    if (e) e.preventDefault();
+                    // volver al primer nivel y reiniciar
+                    this.currentLevelIndex = 0;
+                    this.level = LEVELS[this.currentLevelIndex];
+                    this.totalScore = 0;
+                    this.totalTimeScore = 0;
+                    this.totalQualityScore = 0;
+                    this.levelTimeScores = [];
+                    this.levelQualityScores = [];
+                    const timeEl = document.getElementById('score-time-hud');
+                    const qualEl = document.getElementById('score-quality-hud');
+                    const totalEl = document.getElementById('score-total-hud');
+                    if (timeEl) timeEl.innerText = 'Tiempo: 0';
+                    if (qualEl) qualEl.innerText = 'Aparcar: 0';
+                    if (totalEl) totalEl.innerText = 'Total: 0';
+                    // limpiar el desglose final
+                    const breakEl = document.getElementById('final-score-breakdown');
+                    if (breakEl) breakEl.innerHTML = '';
+                    this.resetLevel();
+                    document.getElementById('end-screen').classList.add('hidden');
+                };
+                el.addEventListener('click', restart);
+                el.addEventListener('touchstart', restart, { passive: false });
+            }
+        }
+        // pedales
+        const bindPedal = (id, key) => {
+            const el = document.getElementById(id);
+            const on = (e) => { if (e.cancelable) e.preventDefault(); this.input[key] = 1; el.classList.add('pressed'); };
+            const off = (e) => { if (e.cancelable) e.preventDefault(); this.input[key] = 0; el.classList.remove('pressed'); };
+            el.addEventListener('mousedown', on);
+            window.addEventListener('mouseup', off);
+            el.addEventListener('touchstart', on, { passive: false });
+            window.addEventListener('touchend', off);
+        };
+        bindPedal('gas-pedal', 'gas');
+        bindPedal('brake-pedal', 'brake');
+        // marchas
+        const setGear = (g) => {
+            this.input.gear = g;
+            document.getElementById('gear-d').classList.toggle('active', g === 1);
+            document.getElementById('gear-r').classList.toggle('active', g === -1);
+            // Actualiza la etiqueta de marcha solo si existe en el DOM (el HUD minimalista ya no la muestra)
+            const gearInfoEl = document.getElementById('gear-info');
+            if (gearInfoEl) {
+                gearInfoEl.innerText = g === 1 ? 'Marcha: D' : 'Marcha: R';
+            }
+        };
+        document.getElementById('gear-d').onclick = () => setGear(1);
+        document.getElementById('gear-r').onclick = () => setGear(-1);
+        document.getElementById('gear-d').ontouchstart = (e) => { e.preventDefault(); setGear(1); };
+        document.getElementById('gear-r').ontouchstart = (e) => { e.preventDefault(); setGear(-1); };
+        // volante: manejo continuo y relativo con rotación acumulativa
+        const wheelZone = document.getElementById('wheel-zone');
+        const wheelEl = document.getElementById('steering-wheel');
+        // capa de resaltado para mostrar un gradiente mientras se toca el volante
+        const highlightEl = document.getElementById('wheel-highlight');
+        // obtenemos el color de acento en formato RGB una vez al crear los handlers
+        const accentRGB = hexToRgb(varAccentColor());
+        // actualiza el gradiente de resaltado en función del ángulo en grados
+        const updateHighlight = (deg) => {
+            // colores con opacidades: más intenso en la dirección del contacto y
+            // completamente transparente en el lado opuesto.  Ajustamos la opacidad
+            // máxima a 0.6 para que no opaque completamente el volante.
+            const c1 = `rgba(${accentRGB.r},${accentRGB.g},${accentRGB.b},0.6)`;
+            const c2 = `rgba(${accentRGB.r},${accentRGB.g},${accentRGB.b},0)`;
+            // La función conic-gradient sitúa 0° en la parte superior (12 en punto) y avanza en sentido
+            // horario. El ángulo obtenido de pointerAngle tiene 0° en la derecha (3 en punto) y
+            // aumenta en sentido antihorario. Para que la zona más intensa del gradiente coincida con
+            // la posición del dedo, rotamos el gradiente 90° en sentido horario (sumamos 90°) en lugar
+            // de restar. De este modo, cuando el dedo esté a la derecha (0°), el máximo brillo se
+            // situará en esa dirección y no desplazado 90°.
+            const cssAngle = deg + 90;
+            highlightEl.style.background = `conic-gradient(from ${cssAngle}deg, ${c1} 0deg, ${c2} 180deg, ${c1} 360deg)`;
+        };
+        // convierte la posición del puntero a un ángulo en grados relativo al centro del volante
+        const pointerAngle = (clientX, clientY) => {
+            const rect = wheelZone.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            return Math.atan2(clientY - cy, clientX - cx) * 180 / Math.PI; // grados
+        };
+        // actualiza la representación visual del volante y la entrada de dirección
+        const updateVisual = () => {
+            // limitar a un máximo de dos vueltas completas en cada dirección (±720 grados)
+            this.wheelRot = Math.max(-720, Math.min(720, this.wheelRot));
+            // gira el elemento del volante
+            wheelEl.style.transform = `rotate(${this.wheelRot}deg)`;
+            // ajustar la dirección del coche: 720 grados equivalen a la dirección máxima
+            this.input.steer = this.wheelRot / 720;
+        };
+        // variables para seguimiento relativo del ángulo del puntero
+        let lastPointerAng = 0;
+        // Detecta el inicio del giro del volante. Acepta toques dentro de la anchura del volante o justo por encima de él,
+        // siempre que no se esté a la derecha del volante (donde están los pedales y la marcha atrás).
+        const wheelStart = (e) => {
+            if (e.cancelable) e.preventDefault();
+            const p = e.touches ? e.touches[0] : e;
+            const rect = wheelZone.getBoundingClientRect();
+            // si el toque está a la derecha del volante o a la izquierda de éste, ignoramos
+            if (p.clientX > rect.right || p.clientX < rect.left) return;
+            // sólo aceptamos toques dentro del volante o por encima del mismo (no debajo)
+            if (p.clientY > rect.bottom) return;
+            this.wheelActive = true;
+            wheelEl.classList.add('active');
+            lastPointerAng = pointerAngle(p.clientX, p.clientY);
+            // mostrar el resaltado del volante y actualizar el gradiente inicial
+            highlightEl.style.opacity = '1';
+            updateHighlight(lastPointerAng);
+        };
+        // Maneja el movimiento del volante. Si todavía no hay un giro activo y el toque está en la zona
+        // válida (anchura del volante y por encima de su parte inferior), activa automáticamente el giro.
+        const wheelMove = (e) => {
+            const p = e.touches ? e.touches[0] : e;
+            const rect = wheelZone.getBoundingClientRect();
+            const withinHoriz = p.clientX >= rect.left && p.clientX <= rect.right;
+            const aboveOrInside = p.clientY <= rect.bottom;
+            if (!this.wheelActive) {
+                if (withinHoriz && aboveOrInside) {
+                    this.wheelActive = true;
+                    wheelEl.classList.add('active');
+                    lastPointerAng = pointerAngle(p.clientX, p.clientY);
+                    // mostrar el resaltado en el primer contacto
+                    highlightEl.style.opacity = '1';
+                    updateHighlight(lastPointerAng);
+                    return;
+                } else {
+                    return;
+                }
+            }
+            const ang = pointerAngle(p.clientX, p.clientY);
+            let delta = ang - lastPointerAng;
+            // corregir el salto cuando se cruza el límite de ±180°
+            if (delta > 180) delta -= 360;
+            if (delta < -180) delta += 360;
+            this.wheelRot += delta;
+            lastPointerAng = ang;
+            updateVisual();
+            // actualizar el gradiente del resaltado según el nuevo ángulo
+            updateHighlight(ang);
+        };
+        // Termina el giro del volante sólo si ya no quedan dedos en la zona del volante.
+        const wheelEnd = (e) => {
+            if (!this.wheelActive) return;
+            if (e && e.touches && e.touches.length > 0) {
+                for (let i = 0; i < e.touches.length; i++) {
+                    const tp = e.touches[i];
+                    const rect2 = wheelZone.getBoundingClientRect();
+                    const withinHoriz2 = tp.clientX >= rect2.left && tp.clientX <= rect2.right;
+                    const aboveOrInside2 = tp.clientY <= rect2.bottom;
+                    if (withinHoriz2 && aboveOrInside2) {
+                        return;
+                    }
+                }
+            }
+            this.wheelActive = false;
+            wheelEl.classList.remove('active');
+            // ocultar el resaltado cuando se suelta completamente el volante
+            highlightEl.style.opacity = '0';
+            // no restablecer la rotación aquí; el retorno al centro se maneja en update()
+        };
+        wheelZone.addEventListener('mousedown', wheelStart);
+        window.addEventListener('mousemove', wheelMove);
+        window.addEventListener('mouseup', wheelEnd);
+        wheelZone.addEventListener('touchstart', wheelStart, { passive: false });
+        window.addEventListener('touchmove', wheelMove, { passive: false });
+        window.addEventListener('touchend', wheelEnd);
+        // zoom con la rueda del ratón (ajuste fino)
+        window.addEventListener('wheel', e => {
+            this.cam.zoom = Math.max(0.5, Math.min(2.5, this.cam.zoom - e.deltaY * 0.001));
+        });
+    }
+
+    /**
+     * Avanza al siguiente nivel de la lista de niveles.  Si se alcanza el final,
+     * se vuelve al primero.  Después de actualizar el índice y la referencia
+     * de nivel, reinicia el juego para comenzar el nuevo nivel.
+     */
+    nextLevel() {
+        this.currentLevelIndex = (this.currentLevelIndex + 1) % LEVELS.length;
+        this.level = LEVELS[this.currentLevelIndex];
+        this.resetLevel();
+    }
+
+    resetLevel() {
+        // Reload the level definition in case the index has changed
+        this.level = LEVELS[this.currentLevelIndex];
+        this.car.x = this.level.carStart.x;
+        this.car.y = this.level.carStart.y;
+        this.car.angle = this.level.carStart.angle;
+        this.car.speed = 0;
+        this.car.steerAngle = 0;
+        this.input.steer = 0;
+        this.input.gas = 0;
+        this.input.brake = 0;
+        this.input.gear = 1;
+        this.timer = 0;
+        this.inZone = false;
+        this.activeTargetIndex = -1;
+        this.crashPoint = null;
+        this.wheelRot = 0;
+        document.getElementById('steering-wheel').style.transform = 'rotate(0deg)';
+        document.getElementById('gear-d').classList.add('active');
+        document.getElementById('gear-r').classList.remove('active');
+        // Actualiza la etiqueta de marcha sólo si existe (en la versión simplificada no se muestra)
+        const gearInfoEl2 = document.getElementById('gear-info');
+        if (gearInfoEl2) {
+            gearInfoEl2.innerText = 'Marcha: D';
+        }
+        document.getElementById('gameover-screen').classList.add('hidden');
+        document.getElementById('success-screen').classList.add('hidden');
+        document.getElementById('end-screen').classList.add('hidden');
+        this.state = 'PLAY';
+        // actualizar indicador de nivel
+        const levelEl = document.getElementById('level-display');
+        if (levelEl) {
+            levelEl.innerText = 'Nivel ' + (this.currentLevelIndex + 1);
+        }
+    }
+
+        update(dt) {
+        if (this.state !== 'PLAY') return;
+        // alias del nivel actual
+        const LEVEL = this.level;
+        this.timer += dt;
+        document.getElementById('timer').innerText = this.timer.toFixed(1) + 's';
+        const c = this.car;
+        const maxSpeed = 160;
+        // desaceleración y aceleración ajustadas: el vehículo acelera un 30 % más lento y
+        // frena un 30 % más rápido que en la versión anterior.  Los valores se
+        // calculan a partir de los parámetros originales (200 y 150).
+        const accel = 200 * 0.7;        // ~140
+        const brakeForce = 150 * 1.3;    // ~195
+        // lógica de aceleración y frenado
+        if (this.input.gas) {
+            // el objetivo de velocidad depende de la marcha
+            const targetSpeed = (this.input.gear === 1) ? maxSpeed : -maxSpeed * 0.6;
+            if (c.speed < targetSpeed) c.speed += accel * dt;
+            if (c.speed > targetSpeed) c.speed -= accel * dt;
+        } else if (this.input.brake) {
+            // freno activo: aplica fuerza de frenado hasta detener el vehículo de manera más gradual
+            if (c.speed > 0) c.speed = Math.max(0, c.speed - brakeForce * dt);
+            else c.speed = Math.min(0, c.speed + brakeForce * dt);
+        }
+        // fricción suave: si no se acelera ni se frena, la velocidad decae lentamente
+        if (!this.input.gas && !this.input.brake) {
+            // fricción más baja para un decaimiento aún más suave de la velocidad
+            c.speed *= 0.999;
+            if (Math.abs(c.speed) < 0.3) c.speed = 0;
+        }
+        // dirección: el ángulo máximo de las ruedas se ajusta a ±55° para limitar la curvatura,
+        // y se aplica un factor de 0.8 sobre el giro del volante para que las ruedas giren
+        // aproximadamente un 20 % menos por cada grado de volante.
+        const maxSteerRad = Utils.toRad(55);
+        // si el volante no está activo y se está acelerando, tender a volver al centro lentamente
+        if (!this.wheelActive && this.input.gas) {
+            // el volante vuelve al centro con inercia
+            this.wheelRot += (0 - this.wheelRot) * 1.5 * dt;
+            // actualizar la rotación visual
+            const wheelEl = document.getElementById('steering-wheel');
+            wheelEl.style.transform = `rotate(${this.wheelRot}deg)`;
+            // ajustar la entrada de dirección: ±720° → ±1
+            this.input.steer = this.wheelRot / 720;
+        }
+        // aplica un factor de 0.8 sobre la entrada del volante y limita el valor a [-1,1].
+        // De este modo el giro de las ruedas es un 20 % menor que en el modelo base.
+        let scaledSteer = this.input.steer * 0.8;
+        if (scaledSteer > 1) scaledSteer = 1;
+        if (scaledSteer < -1) scaledSteer = -1;
+        const targetSteer = scaledSteer * maxSteerRad;
+        c.steerAngle += (targetSteer - c.steerAngle) * 10 * dt;
+        // movimiento del vehículo basado en el modelo de bicicleta cinemático.  Para que
+        // el giro sea físicamente realista, la variación de la orientación se calcula
+        // usando la tasa de giro yawRate = (velocidad * tan(ángulo de ruedas)) / L,
+        // donde L es la distancia entre ejes del vehículo【89503561768728†L87-L105】.  El desplazamiento
+        // en X e Y se obtiene multiplicando la velocidad por el coseno y el seno de la
+        // orientación actual, tal y como indica el modelo【89503561768728†L87-L105】.
+        if (Math.abs(c.speed) > 1) {
+            // distancia entre ejes real en píxeles
+            const wheelBase = CAR_L * WHEEL_BASE_RATIO;
+            const halfWB = wheelBase / 2;
+            // tomamos el ángulo actual para calcular la posición del eje trasero
+            const oldAngle = c.angle;
+            // calcular la posición del eje trasero (se asume que el punto de referencia del coche
+            // es el centro del vehículo, por lo que desplazamos media distancia entre ejes en
+            // dirección opuesta a su orientación)
+            let xRear = c.x - Math.cos(oldAngle) * halfWB;
+            let yRear = c.y - Math.sin(oldAngle) * halfWB;
+            // cálculo de la variación de orientación según el modelo de bicicleta
+            const deltaAngle = (c.speed * dt) * Math.tan(c.steerAngle) / wheelBase;
+            const newAngle = oldAngle + deltaAngle;
+            // actualización de la posición del eje trasero utilizando el ángulo anterior.  Esto
+            // equivale a desplazar el eje trasero en la dirección actual de marcha.  Para
+            // distancias cortas (dt pequeño) la aproximación es suficiente.
+            xRear += Math.cos(oldAngle) * c.speed * dt;
+            yRear += Math.sin(oldAngle) * c.speed * dt;
+            // calcular la nueva posición del centro del vehículo sumando media distancia
+            // entre ejes en la dirección del nuevo ángulo
+            c.x = xRear + Math.cos(newAngle) * halfWB;
+            c.y = yRear + Math.sin(newAngle) * halfWB;
+            // actualizar la orientación del vehículo
+            c.angle = newAngle;
+        }
+        // actualizar motor
+        AudioSys.updateEngine(Math.abs(c.speed) / maxSpeed);
+        // actualizar velocímetro gráfico en lugar de mostrar el valor textual
+        drawSpeedometerGraphic(c.speed);
+        // mantenemos la actualización del elemento de velocidad oculto para evitar errores
+        const speedEl = document.getElementById('speed');
+        if (speedEl) speedEl.innerText = 'Velocidad: ' + Math.round(Math.abs(c.speed)).toString();
+        // colisiones
+        const carW = CAR_W;
+        const carL = CAR_L;
+        const carOBB = Utils.getOBB(c.x, c.y, carL, carW, c.angle);
+        let crash = false;
+        let minDist = 999;
+        LEVEL.obstacles.forEach(o => {
+            const obsOBB = Utils.getOBB(o.x, o.y, o.w, o.h, 0);
+            if (Utils.checkCollision(carOBB, obsOBB)) {
+                crash = true;
+                // calcula el punto de impacto y la dirección hacia el obstáculo si aún no se ha establecido
+                if (!this.crashPoint) {
+                    const dx = o.x - c.x;
+                    const dy = o.y - c.y;
+                    const distVec = Math.hypot(dx, dy);
+                    // evitar división por cero
+                    const px = c.x + (dx / (distVec || 1)) * (carL / 2);
+                    const py = c.y + (dy / (distVec || 1)) * (carL / 2);
+                    this.crashPoint = { x: px, y: py, angle: Math.atan2(dy, dx) };
+                }
+            }
+            const dist = Math.hypot(c.x - o.x, c.y - o.y) - Math.max(o.w, o.h) / 2 - carL / 2;
+            if (dist < minDist) minDist = dist;
+        });
+        // fuera de límites
+        if (c.x < 0 || c.x > 800 || c.y < 0 || c.y > 800) {
+            crash = true;
+            if (!this.crashPoint) {
+                // calcula un punto de impacto aproximado al borde
+                let dx = 0, dy = 0;
+                if (c.x < 0) dx = -1;
+                else if (c.x > 800) dx = 1;
+                if (c.y < 0) dy = -1;
+                else if (c.y > 800) dy = 1;
+                const norm = Math.hypot(dx, dy) || 1;
+                const px = c.x + (dx / norm) * (carL / 2);
+                const py = c.y + (dy / norm) * (carL / 2);
+                this.crashPoint = { x: px, y: py, angle: Math.atan2(dy, dx) };
+            }
+        }
+        AudioSys.beepSensor(Math.max(0, minDist));
+        if (crash) {
+            this.state = 'GAMEOVER';
+            // ocultar la pantalla de victoria en caso de choque
+            document.getElementById('success-screen').classList.add('hidden');
+            document.getElementById('end-screen').classList.add('hidden');
+            document.getElementById('gameover-screen').classList.remove('hidden');
+        }
+        // condición de victoria: comprobar todos los huecos
+        let successIndex = -1;
+        let successDist = Infinity;
+        let successAngDiff = 0;
+        if (LEVEL.targets && Array.isArray(LEVEL.targets)) {
+            for (let i = 0; i < LEVEL.targets.length; i++) {
+                const t = LEVEL.targets[i];
+                const dx = c.x - t.x;
+                const dy = c.y - t.y;
+                const distToTarget = Math.hypot(dx, dy);
+                let carAng = Math.atan2(Math.sin(c.angle), Math.cos(c.angle));
+                const targetAng = t.angle;
+                let angDiff = Math.abs(carAng - targetAng);
+                if (angDiff > Math.PI) angDiff = 2 * Math.PI - angDiff;
+                const inPos = distToTarget < 15;
+                const inAng = angDiff < 0.2;
+                if (inPos && inAng) {
+                    successIndex = i;
+                    successDist = distToTarget;
+                    successAngDiff = angDiff;
+                    break;
+                }
+            }
+        } else {
+            // compatibilidad con niveles antiguos con un solo target
+            const t = LEVEL.target;
+            const dx = c.x - t.x;
+            const dy = c.y - t.y;
+            const distToTarget = Math.hypot(dx, dy);
+            let carAng = Math.atan2(Math.sin(c.angle), Math.cos(c.angle));
+            const targetAng = t.angle;
+            let angDiff = Math.abs(carAng - targetAng);
+            if (angDiff > Math.PI) angDiff = 2 * Math.PI - angDiff;
+            const inPos = distToTarget < 15;
+            const inAng = angDiff < 0.2;
+            if (inPos && inAng) {
+                successIndex = 0;
+                successDist = distToTarget;
+                successAngDiff = angDiff;
+            }
+        }
+        this.inZone = successIndex >= 0;
+        this.activeTargetIndex = successIndex;
+        if (this.inZone && Math.abs(c.speed) < 2) {
+            // si habíamos detectado un choque antes, lo ignoramos para la victoria
+            this.state = 'WIN';
+            // calcular puntuaciones por categorías
+            const timeScore = Math.max(0, 1000 - this.timer * 10);
+            const qualityBase = Math.max(0, 1000 - (successDist * 5 + successAngDiff * 100));
+            // determinar una nota adicional según lo centrado y alineado que esté el coche
+            let nota = '';
+            let bonus = 0;
+            if (successDist < 4 && successAngDiff < 0.05) {
+                nota = 'Excelente';
+                bonus = 100;
+            } else if (successDist < 8 && successAngDiff < 0.1) {
+                nota = 'Bien';
+                bonus = 50;
+            } else {
+                nota = 'Aceptable';
+                bonus = 0;
+            }
+            const qualityScore = qualityBase + bonus;
+            const levelTotal = timeScore + qualityScore;
+            // estrellas basadas en la puntuación total del nivel
+            let stars = 1;
+            if (levelTotal > 1500) stars = 2;
+            if (levelTotal > 1800) stars = 3;
+            const sc = document.getElementById('stars-container');
+            sc.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const s = document.createElement('span');
+                s.innerHTML = '★';
+                if (i < stars) s.className = 'filled';
+                sc.appendChild(s);
+            }
+            // actualizar texto de puntuación con desgloses
+            const gradeText =
+                'Tiempo empleado: ' + this.timer.toFixed(1) + 's<br>' +
+                'Puntos por tiempo: ' + Math.floor(timeScore) + '<br>' +
+                'Puntos por aparcar: ' + Math.floor(qualityScore) + '<br>' +
+                'Puntos totales: ' + Math.floor(levelTotal) + '<br>' +
+                'Nota: ' + nota + (bonus > 0 ? ' (+' + bonus + ')' : '');
+            document.getElementById('score-text').innerHTML = gradeText;
+            // acumular las puntuaciones
+            this.levelTimeScores.push(timeScore);
+            this.levelQualityScores.push(qualityScore);
+            this.totalTimeScore += timeScore;
+            this.totalQualityScore += qualityScore;
+            this.totalScore += levelTotal;
+            // actualizar marcador en HUD
+            const timeEl = document.getElementById('score-time-hud');
+            const qualEl = document.getElementById('score-quality-hud');
+            const totalEl = document.getElementById('score-total-hud');
+            if (timeEl) timeEl.innerText = 'Tiempo: ' + Math.floor(this.totalTimeScore);
+            if (qualEl) qualEl.innerText = 'Aparcar: ' + Math.floor(this.totalQualityScore);
+            if (totalEl) totalEl.innerText = 'Total: ' + Math.floor(this.totalScore);
+            // mostrar puntuación acumulada en la pantalla de éxito
+            const cumEl = document.getElementById('cumulative-score');
+            if (cumEl) {
+                cumEl.innerHTML =
+                    'Acumulado tiempo: ' + Math.floor(this.totalTimeScore) + '<br>' +
+                    'Acumulado aparcar: ' + Math.floor(this.totalQualityScore) + '<br>' +
+                    'Total acumulado: ' + Math.floor(this.totalScore);
+            }
+            // ocultar la pantalla de choque si estuviera visible
+            document.getElementById('gameover-screen').classList.add('hidden');
+            // Mostrar texto del botón según si hay más niveles
+            const nextBtn = document.getElementById('next-btn');
+            if (this.currentLevelIndex < LEVELS.length - 1) {
+                nextBtn.innerText = 'SIGUIENTE NIVEL';
+                document.getElementById('success-screen').classList.remove('hidden');
+            } else {
+                // mostrar puntuación total y desglose en la pantalla final
+                const finalScoreEl = document.getElementById('final-score-display');
+                if (finalScoreEl) {
+                    finalScoreEl.innerHTML =
+                        'Puntuación total: ' + Math.floor(this.totalScore) + '<br>' +
+                        'Puntuación por tiempo: ' + Math.floor(this.totalTimeScore) + '<br>' +
+                        'Puntuación por aparcar: ' + Math.floor(this.totalQualityScore);
+                }
+                const finalBreakEl = document.getElementById('final-score-breakdown');
+                if (finalBreakEl) {
+                    let html = '';
+                    for (let i = 0; i < this.levelTimeScores.length; i++) {
+                        html += 'Nivel ' + (i + 1) + ': Tiempo ' + Math.floor(this.levelTimeScores[i]) + ', Aparcar ' + Math.floor(this.levelQualityScores[i]) + ', Total ' + Math.floor(this.levelTimeScores[i] + this.levelQualityScores[i]) + '<br>';
+                    }
+                    html += '<hr>';
+                    html += 'Total Tiempo: ' + Math.floor(this.totalTimeScore) + '<br>';
+                    html += 'Total Aparcar: ' + Math.floor(this.totalQualityScore) + '<br>';
+                    html += 'Total General: ' + Math.floor(this.totalScore);
+                    finalBreakEl.innerHTML = html;
+                }
+                document.getElementById('end-screen').classList.remove('hidden');
+            }
+        }
+    }
+
+    loop(t) {
+        const dt = Math.min((t - this.lastTime) / 1000, 0.1);
+        this.lastTime = t;
+        this.update(dt);
+        this.draw();
+        requestAnimationFrame(tt => this.loop(tt));
+    }
+
+    draw() {
+        // alias para el nivel actual
+        const LEVEL = this.level;
+        // fondo: usa un gris claro consistente con el fondo del documento
+        this.ctx.fillStyle = '#e4e4e4';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.save();
+        // cámara: centramos pero con vista adelantada para ver mejor la trayectoria
+        const cx = this.canvas.width / 2;
+        const cy = this.canvas.height / 2;
+        // No desplazamiento hacia adelante: centramos el coche en pantalla tanto horizontal como verticalmente
+        const offsetX = 0;
+        const offsetY = 0;
+        this.ctx.translate(cx, cy);
+        this.ctx.scale(this.cam.zoom, this.cam.zoom);
+        this.ctx.translate(-this.car.x - offsetX, -this.car.y - offsetY);
+        // cuadrícula de fondo en gris oscuro para que se vea sobre el suelo claro
+        this.ctx.strokeStyle = '#bbb';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        for (let i = 0; i <= 800; i += 100) {
+            this.ctx.moveTo(i, 0);
+            this.ctx.lineTo(i, 800);
+        }
+        for (let i = 0; i <= 800; i += 100) {
+            this.ctx.moveTo(0, i);
+            this.ctx.lineTo(800, i);
+        }
+        this.ctx.stroke();
+        // Draw improved road lines (centre lane).  Use dashed lines to hint lanes.
+        // Ligeramente más oscuros que la cuadrícula para que se distingan.
+        this.ctx.strokeStyle = '#999';
+        this.ctx.lineWidth = 3;
+        this.ctx.setLineDash([20, 20]);
+        const refTarget = LEVEL.target || (LEVEL.targets ? LEVEL.targets[0] : null);
+        if (refTarget && Math.abs(refTarget.angle) < 0.1) {
+            // horizontal orientation: draw horizontal dashed line across the middle
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, 400);
+            this.ctx.lineTo(800, 400);
+            this.ctx.stroke();
+        } else {
+            // vertical orientation: draw vertical dashed line through the middle
+            this.ctx.beginPath();
+            this.ctx.moveTo(400, 0);
+            this.ctx.lineTo(400, 800);
+            this.ctx.stroke();
+        }
+        this.ctx.setLineDash([]);
+        // dibujar huecos de destino con flecha de dirección
+        const drawTargets = (targets) => {
+            for (let i = 0; i < targets.length; i++) {
+                const t = targets[i];
+                this.ctx.save();
+                this.ctx.translate(t.x, t.y);
+                // color y relleno en función de si estamos en este hueco
+                this.ctx.strokeStyle = (this.activeTargetIndex === i) ? '#2ecc71' : '#fff';
+                this.ctx.fillStyle = (this.activeTargetIndex === i) ? 'rgba(46,204,113,0.3)' : 'rgba(255,255,255,0.05)';
+                this.ctx.lineWidth = 2;
+                this.ctx.setLineDash([8, 8]);
+                this.ctx.fillRect(-t.w / 2, -t.h / 2, t.w, t.h);
+                this.ctx.strokeRect(-t.w / 2, -t.h / 2, t.w, t.h);
+                // flecha interna indicando la dirección de aparcado
+                this.ctx.setLineDash([]);
+                this.ctx.save();
+                // Rotamos la flecha de manera que apunte en la dirección de aparcado (el ángulo objetivo más 90° porque la flecha dibujada apunta hacia arriba por defecto)
+                this.ctx.rotate(t.angle + Math.PI / 2);
+                this.ctx.fillStyle = (this.activeTargetIndex === i) ? '#2ecc71' : varAccentColor();
+                // dibujar una flecha simple apuntando hacia arriba (en coordenadas locales)
+                const arrowLength = t.h * 0.35;
+                const arrowWidth = t.w * 0.3;
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, -arrowLength);
+                this.ctx.lineTo(arrowWidth / 2, 0);
+                this.ctx.lineTo(-arrowWidth / 2, 0);
+                this.ctx.closePath();
+                this.ctx.fill();
+                this.ctx.restore();
+                this.ctx.restore();
+            }
+        };
+        if (LEVEL.targets && Array.isArray(LEVEL.targets)) {
+            drawTargets(LEVEL.targets);
+        } else if (LEVEL.target) {
+            drawTargets([LEVEL.target]);
+        }
+        // obstáculos y vehículos pasivos con mejor aspecto
+        LEVEL.obstacles.forEach(o => {
+            if (o.type === 'circle') {
+                this.ctx.fillStyle = o.c;
+                this.ctx.beginPath();
+                this.ctx.arc(o.x, o.y, o.w, 0, Math.PI * 2);
+                this.ctx.fill();
+            } else if (o.type === 'vehicle') {
+                drawPassiveCar(this.ctx, o.x, o.y, o.w, o.h, o.angle || 0, o.c);
+            } else {
+                this.ctx.fillStyle = o.c;
+                this.ctx.fillRect(o.x - o.w / 2, o.y - o.h / 2, o.w, o.h);
+            }
+        });
+
+        // si hay choque, dibuja una flecha roja parpadeante en el punto de impacto
+        if (this.state === 'GAMEOVER' && this.crashPoint) {
+            const now = Date.now();
+            const blink = Math.sin(now / 200) > 0 ? 1 : 0;
+            if (blink > 0) {
+                this.ctx.save();
+                this.ctx.translate(this.crashPoint.x, this.crashPoint.y);
+                this.ctx.rotate(this.crashPoint.angle);
+                this.ctx.fillStyle = '#e74c3c';
+                this.ctx.globalAlpha = blink;
+                const arrowL = 20;
+                const arrowW = 8;
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, -arrowL);
+                this.ctx.lineTo(arrowW / 2, 0);
+                this.ctx.lineTo(-arrowW / 2, 0);
+                this.ctx.closePath();
+                this.ctx.fill();
+                this.ctx.globalAlpha = 1.0;
+                this.ctx.restore();
+            }
+        }
+        // coche
+        const cw = CAR_W;
+        const cl = CAR_L;
+        this.ctx.save();
+        this.ctx.translate(this.car.x, this.car.y);
+        this.ctx.rotate(this.car.angle);
+        // guías de trayectoria
+        if (this.showGuides) {
+            this.ctx.save();
+            this.ctx.beginPath();
+            const dir = this.input.gear;
+            // punto de partida local (centro del coche) y orientación inicial nula,
+            // ya que el lienzo ya está rotado con el ángulo del coche.
+            let sx = 0, sy = 0, sa = 0;
+            this.ctx.strokeStyle = (dir === 1) ? 'cyan' : 'magenta';
+            this.ctx.lineWidth = 1;
+            this.ctx.setLineDash([4, 4]);
+            // distancia entre ejes para el cálculo de la orientación
+            const wheelBase = CAR_L * WHEEL_BASE_RATIO;
+            // número de segmentos que dibujaremos para predecir la trayectoria
+            const halfWB = wheelBase / 2;
+            for (let i = 0; i < 15; i++) {
+                // distancia avanzada en cada segmento.  Usamos 5 px como paso base y lo
+                // multiplicamos por la dirección del cambio (1 para D, −1 para R).
+                const step = 5 * dir;
+                // variación de orientación usando el modelo cinemático: β = (paso * tan(ángulo de ruedas)) / L
+                const beta = (step * Math.tan(this.car.steerAngle)) / wheelBase;
+                const nextA = sa + beta;
+                // desplazamiento del centro del vehículo calculado a partir del movimiento del eje trasero
+                // y el desplazamiento debido a la rotación (véase derivación en comentarios del código)
+                const dx = Math.cos(sa) * step + halfWB * (Math.cos(nextA) - Math.cos(sa));
+                const dy = Math.sin(sa) * step + halfWB * (Math.sin(nextA) - Math.sin(sa));
+                const nextX = sx + dx;
+                const nextY = sy + dy;
+                // anchura del coche para calcular los extremos
+                const halfW = cw / 2;
+                // desplazamientos perpendiculares en la orientación actual y la siguiente
+                const offXCurr = Math.cos(sa + Math.PI / 2) * halfW;
+                const offYCurr = Math.sin(sa + Math.PI / 2) * halfW;
+                const offXNext = Math.cos(nextA + Math.PI / 2) * halfW;
+                const offYNext = Math.sin(nextA + Math.PI / 2) * halfW;
+                // dibujar línea en el borde izquierdo
+                this.ctx.moveTo(sx + offXCurr, sy + offYCurr);
+                this.ctx.lineTo(nextX + offXNext, nextY + offYNext);
+                // dibujar línea en el borde derecho
+                this.ctx.moveTo(sx - offXCurr, sy - offYCurr);
+                this.ctx.lineTo(nextX - offXNext, nextY - offYNext);
+                // actualizar centro y orientación para el siguiente segmento
+                sx = nextX;
+                sy = nextY;
+                sa = nextA;
+            }
+            this.ctx.stroke();
+            this.ctx.restore();
+        }
+        // carrocería
+        this.ctx.fillStyle = '#e74c3c';
+        this.ctx.shadowColor = 'black';
+        this.ctx.shadowBlur = 10;
+        this.ctx.beginPath();
+        this.ctx.roundRect(-cl / 2, -cw / 2, cl, cw, 6);
+        this.ctx.fill();
+        this.ctx.shadowBlur = 0;
+        // techo
+        this.ctx.fillStyle = '#222';
+        this.ctx.beginPath();
+        this.ctx.roundRect(-cl / 4, -cw / 2 + 3, cl / 2, cw - 6, 4);
+        this.ctx.fill();
+        // faros delanteros
+        this.ctx.fillStyle = '#f1c40f';
+        this.ctx.beginPath();
+        this.ctx.arc(cl / 2, -cw / 3, 3, 0, Math.PI * 2);
+        this.ctx.arc(cl / 2, cw / 3, 3, 0, Math.PI * 2);
+        this.ctx.fill();
+        // luces traseras
+        this.ctx.fillStyle = this.input.brake ? '#ff0000' : '#550000';
+        this.ctx.fillRect(-cl / 2 - 1, -cw / 3, 2, 6);
+        this.ctx.fillRect(-cl / 2 - 1, cw / 3, 2, 6);
+        // ruedas
+        this.ctx.fillStyle = '#111';
+        const drawWheel = (x, y, a) => {
+            this.ctx.save();
+            this.ctx.translate(x, y);
+            this.ctx.rotate(a);
+            this.ctx.fillRect(-6, -3, 12, 6);
+            this.ctx.restore();
+        };
+        // distancia desde el centro hasta el eje de las ruedas delanteras: se ajusta en función del incremento de longitud
+        const ax = (cl / 2) * WHEEL_BASE_RATIO;
+        drawWheel(ax, -cw / 2 + 2, this.car.steerAngle);
+        drawWheel(ax, cw / 2 - 2, this.car.steerAngle);
+        drawWheel(-ax, -cw / 2 + 2, 0);
+        drawWheel(-ax, cw / 2 - 2, 0);
+        this.ctx.restore();
+        this.ctx.restore();
+    }
+}
+
+// función para recuperar el color de acento como string; evita problemas al acceder a CSS desde JS
+function varAccentColor() {
+    return getComputedStyle(document.documentElement).getPropertyValue('--accent-color') || '#f39c12';
+}
+
+/**
+ * Convierte un código de color hexadecimal (#RRGGBB o #RGB) a un objeto RGB.
+ * Si el valor hexadecimal no incluye el carácter '#', se asume que ya está limpio.
+ * @param {string} hex
+ * @returns {{r:number,g:number,b:number}}
+ */
+function hexToRgb(hex) {
+    let h = hex.trim();
+    if (h.startsWith('#')) h = h.slice(1);
+    if (h.length === 3) {
+        h = h.split('').map(c => c + c).join('');
+    }
+    const intVal = parseInt(h, 16);
+    const r = (intVal >> 16) & 255;
+    const g = (intVal >> 8) & 255;
+    const b = intVal & 255;
+    return { r, g, b };
+}
+
+/**
+ * Dibuja un coche pasivo (vehículo estacionado) con detalles simples como cuerpo,
+ * techo y ruedas. A diferencia de los obstáculos rectangulares, este diseño
+ * mejora la estética de los coches aparcados. Los parámetros de anchura y
+ * longitud se interpretan de manera que la dimensión mayor representa la
+ * longitud del vehículo.
+ * @param {CanvasRenderingContext2D} ctx Contexto del canvas.
+ * @param {number} x Posición X del centro.
+ * @param {number} y Posición Y del centro.
+ * @param {number} w Anchura original del obstáculo.
+ * @param {number} h Altura original del obstáculo.
+ * @param {number} angle Ángulo de rotación en radianes.
+ * @param {string} color Color principal de la carrocería.
+ */
+function drawPassiveCar(ctx, x, y, w, h, angle, color) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    // determine which dimension is the length (may vary depending on orientation)
+    let length = w;
+    let width = h;
+    if (h > w) {
+        length = h;
+        width = w;
+    }
+    // body
+    ctx.fillStyle = color;
+    ctx.shadowColor = 'black';
+    ctx.shadowBlur = 8;
+    const bodyRadius = 4;
+    ctx.beginPath();
+    ctx.roundRect(-length / 2, -width / 2, length, width, bodyRadius);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // roof
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    const roofLength = length * 0.5;
+    const roofWidth = width * 0.6;
+    ctx.fillRect(-roofLength / 2, -roofWidth / 2, roofLength, roofWidth);
+    // wheels
+    ctx.fillStyle = '#111';
+    const wheelLength = Math.min(12, length * 0.25);
+    const wheelWidth = Math.min(6, width * 0.3);
+    const axle = length / 2 - 8;
+    // front axle
+    ctx.fillRect(axle - wheelLength / 2, -width / 2 - wheelWidth / 2, wheelLength, wheelWidth);
+    ctx.fillRect(axle - wheelLength / 2, width / 2 - wheelWidth / 2, wheelLength, wheelWidth);
+    // rear axle
+    ctx.fillRect(-axle - wheelLength / 2, -width / 2 - wheelWidth / 2, wheelLength, wheelWidth);
+    ctx.fillRect(-axle - wheelLength / 2, width / 2 - wheelWidth / 2, wheelLength, wheelWidth);
+    ctx.restore();
+}
+
+// arranque cuando la página ha cargado
+window.onload = () => {
+    // inicializar referencias al velocímetro
+    speedometerCanvas = document.getElementById('speedometer');
+    if (speedometerCanvas) {
+        speedometerCtx = speedometerCanvas.getContext('2d');
+    }
+    new Game();
+};
+</script>
+</body>
+</html>
