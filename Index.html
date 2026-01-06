@@ -1289,11 +1289,12 @@ class Game {
         this.timer += dt;
         document.getElementById('timer').innerText = this.timer.toFixed(1) + 's';
         const c = this.car;
-        const maxSpeed = 160;
-        // desaceleración y aceleración ajustadas: el vehículo acelera un 30 % más lento y
-        // frena un 30 % más rápido que en la versión anterior.  Los valores se
-        // calculan a partir de los parámetros originales (200 y 150).
-        const accel = 200 * 0.7;        // ~140
+        // velocidad máxima reducida a la mitad para ambos sentidos de la marcha
+        const maxSpeed = 80;
+        // desaceleración y aceleración ajustadas: el vehículo acelera ahora a la mitad
+        // de la tasa previa y frena un 30 % más rápido que en la versión anterior.  Los
+        // valores se calculan a partir de los parámetros originales (200 y 150).
+        const accel = (200 * 0.7) * 0.5;        // ~70
         const brakeForce = 150 * 1.3;    // ~195
         // lógica de aceleración y frenado
         if (this.input.gas) {
