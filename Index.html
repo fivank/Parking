@@ -973,9 +973,10 @@ LEVELS.push({
     targets: [
         { x: 400, y: 460, w: 95, h: 42, angle: 0 }
     ],
-    // Desplazamos el coche inicial ligeramente hacia el centro para que no
-    // aparezca rozando el muro inferior al arrancar este nivel final.
-    carStart: { x: 150, y: 700, angle: -Math.PI / 2 }
+    // Desplazamos el coche inicial hacia la derecha y un poco más arriba para
+    // evitar que aparezca superpuesto con los coches de la columna izquierda
+    // ni con el muro inferior al cargar este nivel final.
+    carStart: { x: 200, y: 680, angle: -Math.PI / 2 }
 });
 
 class Game {
