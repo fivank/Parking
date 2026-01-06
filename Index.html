@@ -862,7 +862,9 @@ LEVELS.push({
         { x: 630, y: 440, w: 42, h: 85, angle: -Math.PI / 2 },
         { x: 170, y: 220, w: 42, h: 85, angle: -Math.PI / 2 }
     ],
-    carStart: { x: 400, y: 720, angle: -Math.PI / 2 }
+    // El coche se sitúa ligeramente más arriba para evitar que la parte trasera
+    // toque el muro inferior al iniciar (la longitud del vehículo es mayor ahora).
+    carStart: { x: 400, y: 700, angle: -Math.PI / 2 }
 });
 
 // Nivel 8: pasillo de parking con coches bien aparcados y pequeños desalineados en los accesos
@@ -930,7 +932,9 @@ LEVELS.push({
         { x: 400, y: 440, w: 42, h: 85, angle: -Math.PI / 2 },
         { x: 630, y: 560, w: 42, h: 85, angle: -Math.PI / 2 }
     ],
-    carStart: { x: 130, y: 730, angle: -Math.PI / 2 }
+    // Ajustamos la posición inicial para evitar colisiones con el muro inferior
+    // al cargar el nivel (especialmente tras alargar la longitud del coche).
+    carStart: { x: 130, y: 700, angle: -Math.PI / 2 }
 });
 
 // Nivel 10: aparcamiento final con coches correctamente aparcados y pasos forzados entre ellos
@@ -969,7 +973,9 @@ LEVELS.push({
     targets: [
         { x: 400, y: 460, w: 95, h: 42, angle: 0 }
     ],
-    carStart: { x: 150, y: 720, angle: -Math.PI / 2 }
+    // Desplazamos el coche inicial ligeramente hacia el centro para que no
+    // aparezca rozando el muro inferior al arrancar este nivel final.
+    carStart: { x: 150, y: 700, angle: -Math.PI / 2 }
 });
 
 class Game {
