@@ -832,7 +832,7 @@ LEVELS.push({
     carStart: { x: 400, y: 700, angle: 0 }
 });
 
-// Nivel 7: tres huecos verticales en hilera con pasos estrechos
+// Nivel 7: aparcamiento en batería con columnas que obligan a maniobrar
 LEVELS.push({
     obstacles: [
         // muros perimetrales
@@ -840,24 +840,33 @@ LEVELS.push({
         { x: 775, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
         { x: 400, y: 25, w: 800, h: 50, c: '#555', type: 'wall' },
         { x: 400, y: 775, w: 800, h: 50, c: '#555', type: 'wall' },
-        // coches verticales adicionales que estrechan la trayectoria
-        { x: 260, y: 300, w: 40, h: 80, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
-        { x: 540, y: 300, w: 40, h: 80, c: '#e67e22', type: 'vehicle', angle: -Math.PI/2 },
-        { x: 260, y: 500, w: 40, h: 80, c: '#1abc9c', type: 'vehicle', angle: -Math.PI/2 },
-        { x: 540, y: 500, w: 40, h: 80, c: '#f39c12', type: 'vehicle', angle: -Math.PI/2 },
-        // coche horizontal central para complicar la maniobra
-        { x: 400, y: 400, w: 85, h: 40, c: '#2980b9', type: 'vehicle', angle: 0 }
+        // filas de coches en batería a ambos lados
+        { x: 220, y: 160, w: 40, h: 85, c: '#8e44ad', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 220, y: 260, w: 40, h: 85, c: '#1abc9c', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 220, y: 460, w: 40, h: 85, c: '#f39c12', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 220, y: 660, w: 40, h: 85, c: '#e74c3c', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 580, y: 200, w: 40, h: 85, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 580, y: 320, w: 40, h: 85, c: '#27ae60', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 580, y: 520, w: 40, h: 85, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 580, y: 640, w: 40, h: 85, c: '#f1c40f', type: 'vehicle', angle: -Math.PI/2 },
+        // columnas centrales que estrechan el pasillo
+        { x: 360, y: 240, w: 50, h: 50, c: '#777', type: 'wall' },
+        { x: 440, y: 420, w: 50, h: 50, c: '#777', type: 'wall' },
+        { x: 360, y: 560, w: 50, h: 50, c: '#777', type: 'wall' },
+        // coches horizontales que bloquean accesos directos
+        { x: 400, y: 320, w: 85, h: 40, c: '#c0392b', type: 'vehicle', angle: 0 },
+        { x: 400, y: 620, w: 85, h: 40, c: '#2980b9', type: 'vehicle', angle: 0 }
     ],
-    target: { x: 400, y: 200, w: 42, h: 85, angle: -Math.PI / 2 },
+    target: { x: 220, y: 360, w: 42, h: 85, angle: -Math.PI / 2 },
     targets: [
-        { x: 400, y: 200, w: 42, h: 85, angle: -Math.PI / 2 },
-        { x: 400, y: 400, w: 42, h: 85, angle: -Math.PI / 2 },
-        { x: 400, y: 600, w: 42, h: 85, angle: -Math.PI / 2 }
+        { x: 220, y: 360, w: 42, h: 85, angle: -Math.PI / 2 },
+        { x: 580, y: 420, w: 42, h: 85, angle: -Math.PI / 2 },
+        { x: 220, y: 560, w: 42, h: 85, angle: -Math.PI / 2 }
     ],
-    carStart: { x: 150, y: 700, angle: -Math.PI / 2 }
+    carStart: { x: 400, y: 720, angle: -Math.PI / 2 }
 });
 
-// Nivel 8: huecos horizontales dispersos con obstáculos mixtos
+// Nivel 8: paralelo en calle con columnas y giros en S
 LEVELS.push({
     obstacles: [
         // muros perimetrales
@@ -865,25 +874,32 @@ LEVELS.push({
         { x: 775, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
         { x: 400, y: 25, w: 800, h: 50, c: '#555', type: 'wall' },
         { x: 400, y: 775, w: 800, h: 50, c: '#555', type: 'wall' },
-        // coches horizontales dispersos
-        { x: 200, y: 250, w: 85, h: 40, c: '#8e44ad', type: 'vehicle', angle: 0 },
-        { x: 600, y: 550, w: 85, h: 40, c: '#f1c40f', type: 'vehicle', angle: 0 },
-        { x: 600, y: 250, w: 85, h: 40, c: '#c0392b', type: 'vehicle', angle: 0 },
-        { x: 200, y: 550, w: 85, h: 40, c: '#27ae60', type: 'vehicle', angle: 0 },
-        // coches verticales que limitan los accesos
-        { x: 400, y: 350, w: 40, h: 80, c: '#e74c3c', type: 'vehicle', angle: -Math.PI/2 },
-        { x: 300, y: 450, w: 40, h: 80, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
-        { x: 500, y: 450, w: 40, h: 80, c: '#16a085', type: 'vehicle', angle: -Math.PI/2 }
+        // hileras de coches paralelos en la parte superior e inferior
+        { x: 160, y: 220, w: 90, h: 40, c: '#e67e22', type: 'vehicle', angle: 0 },
+        { x: 300, y: 220, w: 90, h: 40, c: '#8e44ad', type: 'vehicle', angle: 0 },
+        { x: 540, y: 220, w: 90, h: 40, c: '#1abc9c', type: 'vehicle', angle: 0 },
+        { x: 680, y: 220, w: 90, h: 40, c: '#f39c12', type: 'vehicle', angle: 0 },
+        { x: 200, y: 580, w: 90, h: 40, c: '#3498db', type: 'vehicle', angle: 0 },
+        { x: 360, y: 580, w: 90, h: 40, c: '#c0392b', type: 'vehicle', angle: 0 },
+        { x: 520, y: 580, w: 90, h: 40, c: '#27ae60', type: 'vehicle', angle: 0 },
+        { x: 680, y: 580, w: 90, h: 40, c: '#9b59b6', type: 'vehicle', angle: 0 },
+        // columnas y pivotes que exigen zig-zag
+        { x: 300, y: 340, w: 40, h: 40, c: '#777', type: 'wall' },
+        { x: 500, y: 420, w: 40, h: 40, c: '#777', type: 'wall' },
+        { x: 620, y: 340, w: 40, h: 40, c: '#777', type: 'wall' },
+        // coches verticales que estrechan la entrada al hueco
+        { x: 420, y: 320, w: 42, h: 85, c: '#16a085', type: 'vehicle', angle: -Math.PI / 2 },
+        { x: 420, y: 520, w: 42, h: 85, c: '#f1c40f', type: 'vehicle', angle: -Math.PI / 2 }
     ],
-    target: { x: 300, y: 200, w: 87, h: 42, angle: 0 },
+    target: { x: 420, y: 220, w: 95, h: 42, angle: 0 },
     targets: [
-        { x: 300, y: 200, w: 87, h: 42, angle: 0 },
-        { x: 500, y: 600, w: 87, h: 42, angle: 0 }
+        { x: 420, y: 220, w: 95, h: 42, angle: 0 },
+        { x: 260, y: 580, w: 95, h: 42, angle: 0 }
     ],
-    carStart: { x: 400, y: 700, angle: 0 }
+    carStart: { x: 120, y: 700, angle: 0 }
 });
 
-// Nivel 9: nivel final con huecos opuestos y obstáculos variados
+// Nivel 9: mezcla de batería y paralelo con entrada encajonada
 LEVELS.push({
     obstacles: [
         // muros perimetrales
@@ -891,22 +907,71 @@ LEVELS.push({
         { x: 775, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
         { x: 400, y: 25, w: 800, h: 50, c: '#555', type: 'wall' },
         { x: 400, y: 775, w: 800, h: 50, c: '#555', type: 'wall' },
-        // coches verticales en el centro
-        { x: 300, y: 400, w: 40, h: 80, c: '#8e44ad', type: 'vehicle', angle: -Math.PI/2 },
-        { x: 500, y: 400, w: 40, h: 80, c: '#e67e22', type: 'vehicle', angle: -Math.PI/2 },
-        { x: 300, y: 600, w: 40, h: 80, c: '#1abc9c', type: 'vehicle', angle: -Math.PI/2 },
-        { x: 500, y: 200, w: 40, h: 80, c: '#c0392b', type: 'vehicle', angle: -Math.PI/2 },
-        // coches horizontales para dificultar la entrada
-        { x: 400, y: 300, w: 85, h: 40, c: '#27ae60', type: 'vehicle', angle: 0 },
-        { x: 400, y: 500, w: 85, h: 40, c: '#f39c12', type: 'vehicle', angle: 0 }
+        // fila de coches en batería a la izquierda
+        { x: 180, y: 180, w: 40, h: 85, c: '#8e44ad', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 180, y: 320, w: 40, h: 85, c: '#e67e22', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 180, y: 460, w: 40, h: 85, c: '#1abc9c', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 180, y: 600, w: 40, h: 85, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
+        // fila de coches en batería a la derecha
+        { x: 620, y: 200, w: 40, h: 85, c: '#f39c12', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 620, y: 340, w: 40, h: 85, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 620, y: 480, w: 40, h: 85, c: '#2ecc71', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 620, y: 620, w: 40, h: 85, c: '#c0392b', type: 'vehicle', angle: -Math.PI/2 },
+        // coches paralelos cruzados en el centro
+        { x: 320, y: 260, w: 90, h: 40, c: '#27ae60', type: 'vehicle', angle: 0 },
+        { x: 480, y: 520, w: 90, h: 40, c: '#16a085', type: 'vehicle', angle: 0 },
+        { x: 320, y: 520, w: 90, h: 40, c: '#f1c40f', type: 'vehicle', angle: 0 },
+        { x: 480, y: 260, w: 90, h: 40, c: '#2980b9', type: 'vehicle', angle: 0 },
+        // columnas que crean un cuello de botella de entrada
+        { x: 340, y: 680, w: 45, h: 45, c: '#777', type: 'wall' },
+        { x: 460, y: 680, w: 45, h: 45, c: '#777', type: 'wall' },
+        { x: 400, y: 360, w: 45, h: 45, c: '#777', type: 'wall' }
     ],
-    target: { x: 200, y: 150, w: 42, h: 85, angle: -Math.PI / 2 },
+    target: { x: 400, y: 440, w: 42, h: 85, angle: -Math.PI / 2 },
     targets: [
-        { x: 200, y: 150, w: 42, h: 85, angle: -Math.PI / 2 },
-        { x: 600, y: 650, w: 42, h: 85, angle: -Math.PI / 2 }
+        { x: 400, y: 440, w: 42, h: 85, angle: -Math.PI / 2 },
+        { x: 620, y: 560, w: 42, h: 85, angle: -Math.PI / 2 }
     ],
-    // Colocamos el coche de inicio un poco más arriba para evitar colisiones con el muro inferior
-    carStart: { x: 400, y: 700, angle: -Math.PI / 2 }
+    carStart: { x: 120, y: 720, angle: -Math.PI / 2 }
+});
+
+// Nivel 10: reto final con pasillos encadenados y hueco oculto
+LEVELS.push({
+    obstacles: [
+        // muros perimetrales
+        { x: 25, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 775, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 400, y: 25, w: 800, h: 50, c: '#555', type: 'wall' },
+        { x: 400, y: 775, w: 800, h: 50, c: '#555', type: 'wall' },
+        // columnas que forman chicanes
+        { x: 300, y: 180, w: 45, h: 45, c: '#777', type: 'wall' },
+        { x: 500, y: 240, w: 45, h: 45, c: '#777', type: 'wall' },
+        { x: 340, y: 360, w: 45, h: 45, c: '#777', type: 'wall' },
+        { x: 520, y: 420, w: 45, h: 45, c: '#777', type: 'wall' },
+        { x: 360, y: 540, w: 45, h: 45, c: '#777', type: 'wall' },
+        { x: 520, y: 620, w: 45, h: 45, c: '#777', type: 'wall' },
+        // coches en paralelo junto a las columnas
+        { x: 200, y: 240, w: 90, h: 40, c: '#1abc9c', type: 'vehicle', angle: 0 },
+        { x: 600, y: 340, w: 90, h: 40, c: '#e74c3c', type: 'vehicle', angle: 0 },
+        { x: 220, y: 480, w: 90, h: 40, c: '#9b59b6', type: 'vehicle', angle: 0 },
+        { x: 620, y: 560, w: 90, h: 40, c: '#27ae60', type: 'vehicle', angle: 0 },
+        // hileras en batería que dejan un hueco interior
+        { x: 150, y: 620, w: 40, h: 85, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 150, y: 720, w: 40, h: 85, c: '#f39c12', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 650, y: 160, w: 40, h: 85, c: '#c0392b', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 650, y: 260, w: 40, h: 85, c: '#8e44ad', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 650, y: 460, w: 40, h: 85, c: '#16a085', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 320, y: 700, w: 40, h: 85, c: '#f1c40f', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 480, y: 700, w: 40, h: 85, c: '#d35400', type: 'vehicle', angle: -Math.PI/2 },
+        // coches horizontales que tapan el acceso directo al hueco
+        { x: 400, y: 640, w: 90, h: 40, c: '#2ecc71', type: 'vehicle', angle: 0 },
+        { x: 400, y: 320, w: 90, h: 40, c: '#2980b9', type: 'vehicle', angle: 0 }
+    ],
+    target: { x: 400, y: 460, w: 95, h: 42, angle: 0 },
+    targets: [
+        { x: 400, y: 460, w: 95, h: 42, angle: 0 }
+    ],
+    carStart: { x: 140, y: 700, angle: -Math.PI / 2 }
 });
 
 class Game {
