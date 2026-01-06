@@ -994,6 +994,7 @@ class Game {
         this.inZone = false;
         this.activeTargetIndex = -1; // índice del hueco en el que estamos
         this.crashPoint = null; // punto de impacto para mostrar flecha en caso de choque
+        this.spawnGrace = 0; // tiempo de gracia tras aparecer para ignorar choques iniciales
         // variables para el volante
         this.wheelRot = 0; // rotación actual del volante en grados
         this.wheelOffset = 0; // desplazamiento inicial para el cálculo relativo
@@ -1278,6 +1279,7 @@ class Game {
         this.inZone = false;
         this.activeTargetIndex = -1;
         this.crashPoint = null;
+        this.spawnGrace = 0.75; // pequeña ventana para evitar choques inmediatos al cargar
         this.wheelRot = 0;
         document.getElementById('steering-wheel').style.transform = 'rotate(0deg)';
         document.getElementById('gear-d').classList.add('active');
@@ -1303,6 +1305,10 @@ class Game {
         // alias del nivel actual
         const LEVEL = this.level;
         this.timer += dt;
+        // reducir el periodo de gracia tras aparecer en un nivel
+        if (this.spawnGrace > 0) {
+            this.spawnGrace = Math.max(0, this.spawnGrace - dt);
+        }
         document.getElementById('timer').innerText = this.timer.toFixed(1) + 's';
         const c = this.car;
         // velocidad máxima reducida a la mitad para ambos sentidos de la marcha
@@ -1432,6 +1438,13 @@ class Game {
             }
         }
         AudioSys.beepSensor(Math.max(0, minDist));
+        // durante el periodo de gracia inicial ignoramos choques para evitar pantallas
+        // de golpe nada más cargar un nivel. Esto permite al jugador corregir si el
+        // vehículo aparece demasiado cerca de un obstáculo.
+        if (this.spawnGrace > 0 && crash) {
+            crash = false;
+            this.crashPoint = null;
+        }
         if (crash) {
             this.state = 'GAMEOVER';
             // ocultar la pantalla de victoria en caso de choque
