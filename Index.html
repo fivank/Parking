@@ -1005,6 +1005,7 @@ class Game {
         this.levelTimeScores = [];
         this.levelQualityScores = [];
         this.bindControls();
+        this.ensureMenuScreen();
         this.resize();
         window.addEventListener('resize', () => this.resize());
         requestAnimationFrame(t => this.loop(t));
@@ -1233,6 +1234,17 @@ class Game {
         });
     }
 
+    // Garantiza que sólo se vea la pantalla de inicio al cargar el juego
+    ensureMenuScreen() {
+        const start = document.getElementById('start-screen');
+        const crash = document.getElementById('gameover-screen');
+        const success = document.getElementById('success-screen');
+        const end = document.getElementById('end-screen');
+        if (start) start.classList.remove('hidden');
+        [crash, success, end].forEach(el => el && el.classList.add('hidden'));
+        this.state = 'MENU';
+    }
+
     /**
      * Avanza al siguiente nivel de la lista de niveles.  Si se alcanza el final,
      * se vuelve al primero.  Después de actualizar el índice y la referencia
@@ -1290,11 +1302,11 @@ class Game {
         // velocidad máxima reducida a la mitad para ambos sentidos de la marcha
         const maxSpeed = 80;
         // desaceleración y aceleración ajustadas: el vehículo acelera ahora un 30 %
-        // más despacio que en el ajuste previo (≈70 → ≈49) y frena un 30 % más rápido
-        // que en la versión original.  Los valores se calculan a partir de los
-        // parámetros iniciales (200 y 150).
+        // más despacio que en el ajuste previo (≈70 → ≈49).  El freno se suaviza
+        // para que la deceleración sea aproximadamente el 40 % de la aceleración.
+        // Los valores se calculan a partir de los parámetros iniciales (200 y 150).
         const accel = (200 * 0.7) * 0.35;        // ~49
-        const brakeForce = 150 * 1.3;    // ~195
+        const brakeForce = accel * 0.4;         // ~19.6
         // lógica de aceleración y frenado
         if (this.input.gas) {
             // el objetivo de velocidad depende de la marcha
