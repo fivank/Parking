@@ -974,8 +974,9 @@ LEVELS.push({
         { x: 400, y: 460, w: 95, h: 42, angle: 0 }
     ],
     // Desplazamos el coche inicial ligeramente hacia el centro para que no
-    // aparezca rozando el muro inferior al arrancar este nivel final.
-    carStart: { x: 150, y: 700, angle: -Math.PI / 2 }
+    // aparezca rozando el muro inferior al arrancar este nivel final ni choque
+    // con los vehículos cercanos.
+    carStart: { x: 220, y: 720, angle: -Math.PI / 2 }
 });
 
 class Game {
