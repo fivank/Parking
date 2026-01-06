@@ -969,7 +969,9 @@ LEVELS.push({
     targets: [
         { x: 400, y: 460, w: 95, h: 42, angle: 0 }
     ],
-    carStart: { x: 150, y: 720, angle: -Math.PI / 2 }
+    // Arrancamos en el pasillo central para evitar el choque inmediato con el coche aparcado
+    // que hay en (150, 720) al inicio del nivel.
+    carStart: { x: 400, y: 720, angle: -Math.PI / 2 }
 });
 
 class Game {
