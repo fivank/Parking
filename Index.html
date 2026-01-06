@@ -1302,14 +1302,12 @@ class Game {
         // velocidad máxima reducida a la mitad para ambos sentidos de la marcha
         const maxSpeed = 80;
         // desaceleración y aceleración ajustadas: el vehículo acelera ahora un 30 %
-        // más despacio que en el ajuste previo (≈70 → ≈49).  Para cumplir con la
-        // nueva petición de que el freno sea tres veces más agresivo que el ajuste
-        // anterior (250 % más que el acelerador), se multiplica la fuerza de frenado
-        // por 3, manteniendo un comportamiento continuo gracias a la integración
-        // temporal con dt.
+        // más despacio que en el ajuste previo (≈70 → ≈49).  Reducimos la fuerza de
+        // frenado a la mitad respecto al ajuste anterior para que el coche frene un
+        // 50 % menos; así suavizamos la deceleración y evitamos paradas bruscas.
         // Los valores se calculan a partir de los parámetros iniciales (200 y 150).
         const accel = (200 * 0.7) * 0.35;        // ~49
-        const brakeForce = accel * 7.5;         // ~367.5
+        const brakeForce = accel * 3.75;        // ~183.75
         // lógica de aceleración y frenado
         if (this.input.gas) {
             // el objetivo de velocidad depende de la marcha
