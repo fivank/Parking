@@ -2172,6 +2172,9 @@ window.onload = () => {
     if (speedometerCanvas) {
         speedometerCtx = speedometerCanvas.getContext('2d');
     }
+    // intentar iniciar la música al cargar el juego
+    AudioSys.init();
+    AudioSys.startMusic();
     new Game();
 };
 </script>
