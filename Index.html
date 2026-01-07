@@ -485,8 +485,6 @@ const AudioSys = {
     engineSubGain: null,
     engineGain: null,
     engineActive: false,
-    musicEl: null,
-    musicBaseVolume: 0.7,
     sensorOsc: null,
     sensorGain: null,
     nextBeep: 0,
@@ -506,11 +504,6 @@ const AudioSys = {
             if (!AudioContext) return;
             if (!this.ctx) {
                 this.ctx = new AudioContext();
-            }
-            if (!this.musicEl) {
-                this.musicEl = new Audio('MueveElMotor.m4a');
-                this.musicEl.loop = true;
-                this.musicEl.volume = this.musicBaseVolume;
             }
             this.ensureContext();
             // motor
@@ -565,19 +558,6 @@ const AudioSys = {
             }
         } catch (e) {
             console.warn('Audio disabled due to error:', e);
-        }
-    },
-    playMusic: function() {
-        if (!this.musicEl) return;
-        this.musicEl.play().catch((e) => {
-            console.warn('Music play failed:', e);
-        });
-    },
-    setMusicDriving: function(isDriving) {
-        if (!this.musicEl) return;
-        const targetVolume = this.musicBaseVolume * (isDriving ? 0.5 : 1);
-        if (Math.abs(this.musicEl.volume - targetVolume) > 0.01) {
-            this.musicEl.volume = targetVolume;
         }
     },
     updateEngine: function(speedRatio) {
@@ -1206,12 +1186,10 @@ class Game {
         const resumeAudio = () => {
             AudioSys.init();
             AudioSys.ensureContext();
-            AudioSys.playMusic();
         };
         const startGame = (e) => {
             if (e) e.preventDefault();
             AudioSys.init();
-            AudioSys.playMusic();
             // cuando se inicia, siempre volvemos al primer nivel
             this.currentLevelIndex = 0;
             this.level = LEVELS[this.currentLevelIndex];
@@ -1542,12 +1520,10 @@ class Game {
     update(dt) {
         if (this.state !== 'PLAY') {
             AudioSys.setEngineActive(false);
-            AudioSys.setMusicDriving(false);
             return;
         }
         if (this.intro.active) {
             AudioSys.setEngineActive(false);
-            AudioSys.setMusicDriving(false);
             this.updateIntro(dt);
             return;
         }
@@ -1586,8 +1562,6 @@ class Game {
             c.speed *= 0.999;
             if (Math.abs(c.speed) < 0.3) c.speed = 0;
         }
-        const isDriving = this.input.gas || this.input.brake || Math.abs(c.speed) > 1;
-        AudioSys.setMusicDriving(isDriving);
         // dirección: el ángulo máximo de las ruedas se ajusta a ±55° para limitar la curvatura,
         // y se aplica un factor de 0.8 sobre el giro del volante para que las ruedas giren
         // aproximadamente un 20 % menos por cada grado de volante.
