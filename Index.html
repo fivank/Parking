@@ -486,6 +486,7 @@ const AudioSys = {
     sensorGain: null,
     nextBeep: 0,
     lastVibrateAt: 0,
+    unlocked: false,
     init: function() {
         try {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -537,6 +538,7 @@ const AudioSys = {
                 this.sensorGain.connect(this.ctx.destination);
                 this.sensorOsc.start();
             }
+            this.unlocked = true;
         } catch (e) {
             console.warn('Audio disabled due to error:', e);
         }
@@ -549,10 +551,14 @@ const AudioSys = {
                 const rpm = idleRpm + (speedRatio * (maxRpm - idleRpm));
                 const fireHz = (rpm / 60) * 4;
                 const mainHz = Math.max(30, fireHz);
-                this.engineOscMain.frequency.setTargetAtTime(mainHz, this.ctx.currentTime, 0.08);
-                this.engineOscHarm.frequency.setTargetAtTime(mainHz * 2, this.ctx.currentTime, 0.08);
-                this.engineOscSub.frequency.setTargetAtTime(mainHz * 0.5, this.ctx.currentTime, 0.08);
-                const targetGain = 0.02 + (speedRatio * 0.08);
+                const now = this.ctx.currentTime;
+                const vibratoRate = 1.2 + (speedRatio * 6.5);
+                const vibratoDepth = 1.5 + (speedRatio * 8);
+                const vibrato = Math.sin(now * Math.PI * 2 * vibratoRate) * vibratoDepth;
+                this.engineOscMain.frequency.setTargetAtTime(mainHz + vibrato, now, 0.08);
+                this.engineOscHarm.frequency.setTargetAtTime((mainHz * 2) + (vibrato * 1.4), now, 0.08);
+                this.engineOscSub.frequency.setTargetAtTime((mainHz * 0.5) + (vibrato * 0.6), now, 0.08);
+                const targetGain = 0.025 + (speedRatio * 0.1);
                 this.engineGain.gain.setTargetAtTime(targetGain, this.ctx.currentTime, 0.12);
             } catch (e) {}
         }
@@ -1140,6 +1146,15 @@ class Game {
     }
 
     bindControls() {
+        const unlockAudio = () => {
+            if (!AudioSys.unlocked) {
+                AudioSys.init();
+            } else if (AudioSys.ctx && AudioSys.ctx.state === 'suspended') {
+                AudioSys.ctx.resume();
+            }
+        };
+        document.addEventListener('pointerdown', unlockAudio, { once: true });
+        document.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
         const startBtn = document.getElementById('start-btn');
         const startGame = (e) => {
             if (e) e.preventDefault();
