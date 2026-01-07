@@ -1217,8 +1217,7 @@ class Game {
         };
         const startGame = (e) => {
             if (e) e.preventDefault();
-            AudioSys.init();
-            AudioSys.startMusic();
+            resumeAudio();
             // cuando se inicia, siempre volvemos al primer nivel
             this.currentLevelIndex = 0;
             this.level = LEVELS[this.currentLevelIndex];
