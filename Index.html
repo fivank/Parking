@@ -484,6 +484,7 @@ const AudioSys = {
     engineHarmGain: null,
     engineSubGain: null,
     engineGain: null,
+    engineActive: false,
     sensorOsc: null,
     sensorGain: null,
     nextBeep: 0,
@@ -583,6 +584,19 @@ const AudioSys = {
             } catch (e) {}
         }
         this.updateVibration(speedRatio);
+    },
+    setEngineActive: function(active) {
+        if (!this.engineGain || !this.ctx) return;
+        if (this.engineActive === active) return;
+        this.engineActive = active;
+        try {
+            const now = this.ctx.currentTime;
+            if (active) {
+                this.engineGain.gain.setTargetAtTime(0.01, now, 0.08);
+            } else {
+                this.engineGain.gain.setTargetAtTime(0, now, 0.08);
+            }
+        } catch (e) {}
     },
     updateVibration: function(speedRatio) {
         if (!navigator.vibrate) return;
@@ -1504,8 +1518,12 @@ class Game {
     }
 
     update(dt) {
-        if (this.state !== 'PLAY') return;
+        if (this.state !== 'PLAY') {
+            AudioSys.setEngineActive(false);
+            return;
+        }
         if (this.intro.active) {
+            AudioSys.setEngineActive(false);
             this.updateIntro(dt);
             return;
         }
@@ -1600,6 +1618,7 @@ class Game {
         this.cam.x = c.x;
         this.cam.y = c.y;
         // actualizar motor
+        AudioSys.setEngineActive(true);
         AudioSys.updateEngine(Math.abs(c.speed) / maxSpeed);
         // actualizar velocímetro gráfico en lugar de mostrar el valor textual
         drawSpeedometerGraphic(c.speed);
@@ -1656,6 +1675,7 @@ class Game {
         }
         if (crash) {
             this.state = 'GAMEOVER';
+            AudioSys.setEngineActive(false);
             // ocultar la pantalla de victoria en caso de choque
             document.getElementById('success-screen').classList.add('hidden');
             document.getElementById('end-screen').classList.add('hidden');
@@ -1707,6 +1727,7 @@ class Game {
         if (this.inZone && Math.abs(c.speed) < 2) {
             // si habíamos detectado un choque antes, lo ignoramos para la victoria
             this.state = 'WIN';
+            AudioSys.setEngineActive(false);
             // calcular puntuaciones por categorías
             const timeScoreRaw = Math.max(0, 1 - this.timer / 150);
             const distScoreRaw = Math.max(0, 1 - successDist / 15);
