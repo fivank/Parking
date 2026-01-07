@@ -317,12 +317,28 @@
 
         /* Estrellas de puntuación */
         .star-rating {
-            font-size: 2.5rem;
+            font-size: 1.8rem;
             color: #444;
             margin: 1rem 0;
         }
         .star-rating span.filled {
             color: gold;
+        }
+        .score-report {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            font-family: monospace;
+            margin-bottom: 1rem;
+        }
+        .score-row {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .score-label {
+            font-weight: bold;
+            color: var(--accent-color);
         }
 
         /* Responsividad para pantallas pequeñas */
@@ -418,7 +434,16 @@
     <!-- Pantalla de victoria -->
     <div id="success-screen" class="screen hidden">
         <h1 style="color: #2ecc71">APARCADO</h1>
-        <div class="star-rating" id="stars-container"></div>
+        <div class="score-report">
+            <div class="score-row">
+                <div class="score-label">Tiempo (0-10)</div>
+                <div class="star-rating" id="time-stars-container"></div>
+            </div>
+            <div class="score-row">
+                <div class="score-label">Aparcamiento (0-10)</div>
+                <div class="star-rating" id="parking-stars-container"></div>
+            </div>
+        </div>
         <div id="score-text" style="font-family: monospace; margin-bottom: 1rem;"></div>
         <!-- Mostramos también la puntuación acumulada en esta pantalla -->
         <div id="cumulative-score" style="font-family: monospace; margin-bottom: 1rem;"></div>
@@ -429,6 +454,16 @@
     <div id="end-screen" class="screen hidden">
         <h1 style="color: #2ecc71">¡JUEGO COMPLETADO!</h1>
         <p>Has superado todos los niveles.</p>
+        <div class="score-report">
+            <div class="score-row">
+                <div class="score-label">Tiempo medio (0-10)</div>
+                <div class="star-rating" id="final-time-stars"></div>
+            </div>
+            <div class="score-row">
+                <div class="score-label">Aparcamiento medio (0-10)</div>
+                <div class="star-rating" id="final-parking-stars"></div>
+            </div>
+        </div>
         <!-- Mostramos la puntuación total en la pantalla final -->
         <div id="final-score-display" style="font-family: monospace; margin-bottom: 0.5rem; color: var(--accent-color);"></div>
         <!-- Desglose de puntuaciones por nivel -->
@@ -580,6 +615,18 @@ function drawSpeedometerGraphic(speed) {
     ctx.beginPath();
     ctx.arc(cx, cy, 4, 0, Math.PI * 2);
     ctx.fill();
+}
+
+function renderStars(container, score, maxStars = 10) {
+    if (!container) return;
+    const clamped = Math.max(0, Math.min(maxStars, Math.round(score)));
+    container.innerHTML = '';
+    for (let i = 0; i < maxStars; i++) {
+        const s = document.createElement('span');
+        s.innerHTML = '★';
+        if (i < clamped) s.className = 'filled';
+        container.appendChild(s);
+    }
 }
 
 // Utilidades de física
@@ -1570,7 +1617,7 @@ class Game {
             // si habíamos detectado un choque antes, lo ignoramos para la victoria
             this.state = 'WIN';
             // calcular puntuaciones por categorías
-            const timeScore = Math.max(0, 1000 - this.timer * 10);
+            const timeScoreRaw = Math.max(0, 1000 - this.timer * 10);
             const qualityBase = Math.max(0, 1000 - (successDist * 5 + successAngDiff * 100));
             // determinar una nota adicional según lo centrado y alineado que esté el coche
             let nota = '';
@@ -1585,25 +1632,18 @@ class Game {
                 nota = 'Aceptable';
                 bonus = 0;
             }
-            const qualityScore = qualityBase + bonus;
+            const qualityScoreRaw = qualityBase + bonus;
+            const timeScore = Math.max(0, Math.min(10, Math.round(timeScoreRaw / 100)));
+            const qualityScore = Math.max(0, Math.min(10, Math.round(qualityScoreRaw / 100)));
             const levelTotal = timeScore + qualityScore;
-            // estrellas basadas en la puntuación total del nivel
-            let stars = 1;
-            if (levelTotal > 1500) stars = 2;
-            if (levelTotal > 1800) stars = 3;
-            const sc = document.getElementById('stars-container');
-            sc.innerHTML = '';
-            for (let i = 0; i < 3; i++) {
-                const s = document.createElement('span');
-                s.innerHTML = '★';
-                if (i < stars) s.className = 'filled';
-                sc.appendChild(s);
-            }
+            // estrellas por categoría (0-10)
+            renderStars(document.getElementById('time-stars-container'), timeScore, 10);
+            renderStars(document.getElementById('parking-stars-container'), qualityScore, 10);
             // actualizar texto de puntuación con desgloses
             const gradeText =
                 'Tiempo empleado: ' + this.timer.toFixed(1) + 's<br>' +
-                'Puntos por tiempo: ' + Math.floor(timeScore) + '<br>' +
-                'Puntos por aparcar: ' + Math.floor(qualityScore) + '<br>' +
+                'Puntos por tiempo (0-10): ' + timeScore.toFixed(0) + '<br>' +
+                'Puntos por aparcar (0-10): ' + qualityScore.toFixed(0) + '<br>' +
                 'Puntos totales: ' + Math.floor(levelTotal) + '<br>' +
                 'Nota: ' + nota + (bonus > 0 ? ' (+' + bonus + ')' : '');
             document.getElementById('score-text').innerHTML = gradeText;
@@ -1623,9 +1663,13 @@ class Game {
             // mostrar puntuación acumulada en la pantalla de éxito
             const cumEl = document.getElementById('cumulative-score');
             if (cumEl) {
+                const avgTime = this.totalTimeScore / this.levelTimeScores.length;
+                const avgQuality = this.totalQualityScore / this.levelQualityScores.length;
                 cumEl.innerHTML =
                     'Acumulado tiempo: ' + Math.floor(this.totalTimeScore) + '<br>' +
                     'Acumulado aparcar: ' + Math.floor(this.totalQualityScore) + '<br>' +
+                    'Promedio tiempo: ' + avgTime.toFixed(1) + '/10<br>' +
+                    'Promedio aparcar: ' + avgQuality.toFixed(1) + '/10<br>' +
                     'Total acumulado: ' + Math.floor(this.totalScore);
             }
             // ocultar la pantalla de choque si estuviera visible
@@ -1639,16 +1683,22 @@ class Game {
                 // mostrar puntuación total y desglose en la pantalla final
                 const finalScoreEl = document.getElementById('final-score-display');
                 if (finalScoreEl) {
+                    const avgTime = this.totalTimeScore / this.levelTimeScores.length;
+                    const avgQuality = this.totalQualityScore / this.levelQualityScores.length;
                     finalScoreEl.innerHTML =
                         'Puntuación total: ' + Math.floor(this.totalScore) + '<br>' +
                         'Puntuación por tiempo: ' + Math.floor(this.totalTimeScore) + '<br>' +
-                        'Puntuación por aparcar: ' + Math.floor(this.totalQualityScore);
+                        'Puntuación por aparcar: ' + Math.floor(this.totalQualityScore) + '<br>' +
+                        'Promedio tiempo: ' + avgTime.toFixed(1) + '/10<br>' +
+                        'Promedio aparcar: ' + avgQuality.toFixed(1) + '/10';
                 }
+                renderStars(document.getElementById('final-time-stars'), this.totalTimeScore / this.levelTimeScores.length, 10);
+                renderStars(document.getElementById('final-parking-stars'), this.totalQualityScore / this.levelQualityScores.length, 10);
                 const finalBreakEl = document.getElementById('final-score-breakdown');
                 if (finalBreakEl) {
                     let html = '';
                     for (let i = 0; i < this.levelTimeScores.length; i++) {
-                        html += 'Nivel ' + (i + 1) + ': Tiempo ' + Math.floor(this.levelTimeScores[i]) + ', Aparcar ' + Math.floor(this.levelQualityScores[i]) + ', Total ' + Math.floor(this.levelTimeScores[i] + this.levelQualityScores[i]) + '<br>';
+                        html += 'Nivel ' + (i + 1) + ': Tiempo ' + Math.floor(this.levelTimeScores[i]) + '/10, Aparcar ' + Math.floor(this.levelQualityScores[i]) + '/10, Total ' + Math.floor(this.levelTimeScores[i] + this.levelQualityScores[i]) + '<br>';
                     }
                     html += '<hr>';
                     html += 'Total Tiempo: ' + Math.floor(this.totalTimeScore) + '<br>';
