@@ -475,11 +475,17 @@
 // Sistema de audio robusto
 const AudioSys = {
     ctx: null,
-    engineOsc: null,
+    engineOscMain: null,
+    engineOscHarm: null,
+    engineOscSub: null,
+    engineMainGain: null,
+    engineHarmGain: null,
+    engineSubGain: null,
     engineGain: null,
     sensorOsc: null,
     sensorGain: null,
     nextBeep: 0,
+    lastVibrateAt: 0,
     init: function() {
         try {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -491,15 +497,34 @@ const AudioSys = {
                 this.ctx.resume();
             }
             // motor
-            if (!this.engineOsc) {
-                this.engineOsc = this.ctx.createOscillator();
+            if (!this.engineOscMain) {
+                this.engineOscMain = this.ctx.createOscillator();
+                this.engineOscHarm = this.ctx.createOscillator();
+                this.engineOscSub = this.ctx.createOscillator();
                 this.engineGain = this.ctx.createGain();
-                this.engineOsc.type = 'sawtooth';
-                this.engineOsc.frequency.value = 50;
-                this.engineGain.gain.value = 0.05;
-                this.engineOsc.connect(this.engineGain);
+                this.engineMainGain = this.ctx.createGain();
+                this.engineHarmGain = this.ctx.createGain();
+                this.engineSubGain = this.ctx.createGain();
+                this.engineOscMain.type = 'sawtooth';
+                this.engineOscHarm.type = 'square';
+                this.engineOscSub.type = 'sine';
+                this.engineOscMain.frequency.value = 50;
+                this.engineOscHarm.frequency.value = 100;
+                this.engineOscSub.frequency.value = 25;
+                this.engineGain.gain.value = 0.04;
+                this.engineMainGain.gain.value = 0.7;
+                this.engineHarmGain.gain.value = 0.25;
+                this.engineSubGain.gain.value = 0.35;
+                this.engineOscMain.connect(this.engineMainGain);
+                this.engineOscHarm.connect(this.engineHarmGain);
+                this.engineOscSub.connect(this.engineSubGain);
+                this.engineMainGain.connect(this.engineGain);
+                this.engineHarmGain.connect(this.engineGain);
+                this.engineSubGain.connect(this.engineGain);
                 this.engineGain.connect(this.ctx.destination);
-                this.engineOsc.start();
+                this.engineOscMain.start();
+                this.engineOscHarm.start();
+                this.engineOscSub.start();
             }
             // sensor
             if (!this.sensorOsc) {
@@ -517,11 +542,38 @@ const AudioSys = {
         }
     },
     updateEngine: function(speedRatio) {
-        if (this.engineOsc && this.ctx) {
+        if (this.engineOscMain && this.ctx) {
             try {
-                this.engineOsc.frequency.setTargetAtTime(50 + (speedRatio * 200), this.ctx.currentTime, 0.1);
+                const idleRpm = 700;
+                const maxRpm = 5600;
+                const rpm = idleRpm + (speedRatio * (maxRpm - idleRpm));
+                const fireHz = (rpm / 60) * 4;
+                const mainHz = Math.max(30, fireHz);
+                this.engineOscMain.frequency.setTargetAtTime(mainHz, this.ctx.currentTime, 0.08);
+                this.engineOscHarm.frequency.setTargetAtTime(mainHz * 2, this.ctx.currentTime, 0.08);
+                this.engineOscSub.frequency.setTargetAtTime(mainHz * 0.5, this.ctx.currentTime, 0.08);
+                const targetGain = 0.02 + (speedRatio * 0.08);
+                this.engineGain.gain.setTargetAtTime(targetGain, this.ctx.currentTime, 0.12);
             } catch (e) {}
         }
+        this.updateVibration(speedRatio);
+    },
+    updateVibration: function(speedRatio) {
+        if (!navigator.vibrate) return;
+        const intensity = Math.max(0, Math.min(1, speedRatio));
+        const now = performance.now();
+        if (intensity < 0.05) {
+            if (now - this.lastVibrateAt > 250) {
+                navigator.vibrate(0);
+                this.lastVibrateAt = now;
+            }
+            return;
+        }
+        const interval = 220 - (intensity * 140);
+        if (now - this.lastVibrateAt < interval) return;
+        const duration = 15 + (intensity * 45);
+        navigator.vibrate(duration);
+        this.lastVibrateAt = now;
     },
     beepSensor: function(dist) {
         if (!this.ctx || !this.sensorGain) return;
