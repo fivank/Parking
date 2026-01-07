@@ -585,6 +585,10 @@ function drawSpeedometerGraphic(speed) {
 // Utilidades de física
 const Utils = {
     toRad: (d) => d * Math.PI / 180,
+    smoothStep: (t) => {
+        const clamped = Math.max(0, Math.min(1, t));
+        return clamped * clamped * (3 - 2 * clamped);
+    },
     rotatePoint: (p, cx, cy, angle) => {
         const c = Math.cos(angle), s = Math.sin(angle);
         const dx = p.x - cx, dy = p.y - cy;
@@ -988,13 +992,26 @@ class Game {
         this.car = { x: 0, y: 0, angle: 0, speed: 0, steerAngle: 0 };
         // Ajustamos el zoom inicial: antes estaba en 0.8 (zoom out).
         // Ahora aplicamos un zoom in incrementando en un 80 %, resultando en 1.44.
-        this.cam = { zoom: 1.44 };
+        this.baseZoom = 1.44;
+        this.cam = { zoom: this.baseZoom, x: 0, y: 0 };
         this.showGuides = true;
         this.timer = 0;
         this.inZone = false;
         this.activeTargetIndex = -1; // índice del hueco en el que estamos
         this.crashPoint = null; // punto de impacto para mostrar flecha en caso de choque
         this.spawnGrace = 0; // tiempo de gracia tras aparecer para ignorar choques iniciales
+        this.intro = {
+            active: false,
+            elapsed: 0,
+            holdDuration: 3,
+            zoomDuration: 2,
+            startZoom: this.baseZoom,
+            targetZoom: this.baseZoom,
+            startX: 0,
+            startY: 0,
+            targetX: 0,
+            targetY: 0
+        };
         // variables para el volante
         this.wheelRot = 0; // rotación actual del volante en grados
         this.wheelOffset = 0; // desplazamiento inicial para el cálculo relativo
@@ -1237,7 +1254,9 @@ class Game {
         window.addEventListener('touchend', wheelEnd);
         // zoom con la rueda del ratón (ajuste fino)
         window.addEventListener('wheel', e => {
-            this.cam.zoom = Math.max(0.5, Math.min(2.5, this.cam.zoom - e.deltaY * 0.001));
+            const nextZoom = Math.max(0.5, Math.min(2.5, this.cam.zoom - e.deltaY * 0.001));
+            this.cam.zoom = nextZoom;
+            this.baseZoom = nextZoom;
         });
     }
 
@@ -1276,6 +1295,7 @@ class Game {
         this.input.brake = 0;
         this.input.gear = 1;
         this.timer = 0;
+        document.getElementById('timer').innerText = this.timer.toFixed(1) + 's';
         this.inZone = false;
         this.activeTargetIndex = -1;
         this.crashPoint = null;
@@ -1298,10 +1318,59 @@ class Game {
         if (levelEl) {
             levelEl.innerText = 'Nivel ' + (this.currentLevelIndex + 1);
         }
+        this.prepareIntroSequence();
     }
 
-        update(dt) {
+    prepareIntroSequence() {
+        const overviewZoom = this.getOverviewZoom();
+        const levelCenter = 400;
+        this.intro.active = true;
+        this.intro.elapsed = 0;
+        this.intro.startZoom = overviewZoom;
+        this.intro.targetZoom = this.baseZoom;
+        this.intro.startX = levelCenter;
+        this.intro.startY = levelCenter;
+        this.intro.targetX = this.car.x;
+        this.intro.targetY = this.car.y;
+        this.cam.zoom = overviewZoom;
+        this.cam.x = levelCenter;
+        this.cam.y = levelCenter;
+    }
+
+    getOverviewZoom() {
+        const levelSize = 800;
+        const fitScale = Math.min(this.canvas.width / levelSize, this.canvas.height / levelSize);
+        const zoomForOverview = fitScale * 0.9;
+        return Math.min(this.baseZoom * 0.8, zoomForOverview);
+    }
+
+    updateIntro(dt) {
+        this.intro.elapsed += dt;
+        if (this.intro.elapsed <= this.intro.holdDuration) {
+            this.cam.zoom = this.intro.startZoom;
+            this.cam.x = this.intro.startX;
+            this.cam.y = this.intro.startY;
+            return;
+        }
+        const zoomElapsed = this.intro.elapsed - this.intro.holdDuration;
+        const t = Utils.smoothStep(zoomElapsed / this.intro.zoomDuration);
+        this.cam.zoom = this.intro.startZoom + (this.intro.targetZoom - this.intro.startZoom) * t;
+        this.cam.x = this.intro.startX + (this.intro.targetX - this.intro.startX) * t;
+        this.cam.y = this.intro.startY + (this.intro.targetY - this.intro.startY) * t;
+        if (zoomElapsed >= this.intro.zoomDuration) {
+            this.intro.active = false;
+            this.cam.zoom = this.intro.targetZoom;
+            this.cam.x = this.intro.targetX;
+            this.cam.y = this.intro.targetY;
+        }
+    }
+
+    update(dt) {
         if (this.state !== 'PLAY') return;
+        if (this.intro.active) {
+            this.updateIntro(dt);
+            return;
+        }
         // alias del nivel actual
         const LEVEL = this.level;
         this.timer += dt;
@@ -1390,6 +1459,8 @@ class Game {
             // actualizar la orientación del vehículo
             c.angle = newAngle;
         }
+        this.cam.x = c.x;
+        this.cam.y = c.y;
         // actualizar motor
         AudioSys.updateEngine(Math.abs(c.speed) / maxSpeed);
         // actualizar velocímetro gráfico en lugar de mostrar el valor textual
@@ -1613,7 +1684,7 @@ class Game {
         const offsetY = 0;
         this.ctx.translate(cx, cy);
         this.ctx.scale(this.cam.zoom, this.cam.zoom);
-        this.ctx.translate(-this.car.x - offsetX, -this.car.y - offsetY);
+        this.ctx.translate(-this.cam.x - offsetX, -this.cam.y - offsetY);
         // cuadrícula de fondo en gris oscuro para que se vea sobre el suelo claro
         this.ctx.strokeStyle = '#bbb';
         this.ctx.lineWidth = 2;
