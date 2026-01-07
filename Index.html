@@ -1617,24 +1617,28 @@ class Game {
             // si habíamos detectado un choque antes, lo ignoramos para la victoria
             this.state = 'WIN';
             // calcular puntuaciones por categorías
-            const timeScoreRaw = Math.max(0, 1000 - this.timer * 10);
-            const qualityBase = Math.max(0, 1000 - (successDist * 5 + successAngDiff * 100));
+            const timeScoreRaw = Math.max(0, 1 - this.timer / 150);
+            const distScoreRaw = Math.max(0, 1 - successDist / 15);
+            const angScoreRaw = Math.max(0, 1 - successAngDiff / 0.2);
+            const qualityBase = distScoreRaw * 0.65 + angScoreRaw * 0.35;
             // determinar una nota adicional según lo centrado y alineado que esté el coche
             let nota = '';
             let bonus = 0;
             if (successDist < 4 && successAngDiff < 0.05) {
                 nota = 'Excelente';
-                bonus = 100;
+                bonus = 2;
             } else if (successDist < 8 && successAngDiff < 0.1) {
                 nota = 'Bien';
-                bonus = 50;
+                bonus = 1;
             } else {
                 nota = 'Aceptable';
                 bonus = 0;
             }
-            const qualityScoreRaw = qualityBase + bonus;
-            const timeScore = Math.max(0, Math.min(10, Math.round(timeScoreRaw / 100)));
-            const qualityScore = Math.max(0, Math.min(10, Math.round(qualityScoreRaw / 100)));
+            const timeScore = Math.max(0, Math.min(10, Math.round(Math.pow(timeScoreRaw, 0.6) * 10)));
+            const qualityScore = Math.max(
+                0,
+                Math.min(10, Math.round(Math.pow(qualityBase, 0.7) * 10) + bonus)
+            );
             const levelTotal = timeScore + qualityScore;
             // estrellas por categoría (0-10)
             renderStars(document.getElementById('time-stars-container'), timeScore, 10);
