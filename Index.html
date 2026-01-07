@@ -512,9 +512,6 @@ const AudioSys = {
             this.ensureContext();
             if (!this.music) {
                 this.music = new Audio('MueveElMotor.m4a');
-                this.music.preload = 'auto';
-                this.music.autoplay = true;
-                this.music.playsInline = true;
                 this.music.loop = true;
                 this.music.volume = this.musicBaseVolume;
             }
@@ -2175,15 +2172,6 @@ window.onload = () => {
     if (speedometerCanvas) {
         speedometerCtx = speedometerCanvas.getContext('2d');
     }
-    AudioSys.init();
-    AudioSys.startMusic();
-    const resumeAudioOnInteraction = () => {
-        AudioSys.init();
-        AudioSys.ensureContext();
-        AudioSys.startMusic();
-    };
-    window.addEventListener('pointerdown', resumeAudioOnInteraction, { once: true });
-    window.addEventListener('keydown', resumeAudioOnInteraction, { once: true });
     new Game();
 };
 </script>
