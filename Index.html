@@ -489,6 +489,10 @@ const AudioSys = {
     sensorGain: null,
     nextBeep: 0,
     lastVibrateAt: 0,
+    music: null,
+    musicBaseVolume: 1,
+    musicDrivingVolume: 0.5,
+    musicDriving: false,
     ensureContext: function() {
         try {
             if (this.ctx && this.ctx.state === 'suspended') {
@@ -506,6 +510,11 @@ const AudioSys = {
                 this.ctx = new AudioContext();
             }
             this.ensureContext();
+            if (!this.music) {
+                this.music = new Audio('MueveElMotor.m4a');
+                this.music.loop = true;
+                this.music.volume = this.musicBaseVolume;
+            }
             // motor
             if (!this.engineOscMain) {
                 this.engineOscMain = this.ctx.createOscillator();
@@ -559,6 +568,24 @@ const AudioSys = {
         } catch (e) {
             console.warn('Audio disabled due to error:', e);
         }
+    },
+    startMusic: function() {
+        if (!this.music) return;
+        try {
+            if (this.music.paused) {
+                const playPromise = this.music.play();
+                if (playPromise && typeof playPromise.catch === 'function') {
+                    playPromise.catch(() => {});
+                }
+            }
+        } catch (e) {}
+    },
+    setMusicDriving: function(isDriving) {
+        if (!this.music) return;
+        if (this.musicDriving === isDriving) return;
+        this.musicDriving = isDriving;
+        const targetVolume = isDriving ? this.musicDrivingVolume : this.musicBaseVolume;
+        this.music.volume = targetVolume;
     },
     updateEngine: function(speedRatio) {
         if (this.engineOscMain && this.ctx) {
@@ -1186,10 +1213,12 @@ class Game {
         const resumeAudio = () => {
             AudioSys.init();
             AudioSys.ensureContext();
+            AudioSys.startMusic();
         };
         const startGame = (e) => {
             if (e) e.preventDefault();
             AudioSys.init();
+            AudioSys.startMusic();
             // cuando se inicia, siempre volvemos al primer nivel
             this.currentLevelIndex = 0;
             this.level = LEVELS[this.currentLevelIndex];
@@ -1520,10 +1549,12 @@ class Game {
     update(dt) {
         if (this.state !== 'PLAY') {
             AudioSys.setEngineActive(false);
+            AudioSys.setMusicDriving(false);
             return;
         }
         if (this.intro.active) {
             AudioSys.setEngineActive(false);
+            AudioSys.setMusicDriving(false);
             this.updateIntro(dt);
             return;
         }
@@ -1620,6 +1651,7 @@ class Game {
         // actualizar motor
         AudioSys.setEngineActive(true);
         AudioSys.updateEngine(Math.abs(c.speed) / maxSpeed);
+        AudioSys.setMusicDriving(Math.abs(c.speed) > 1);
         // actualizar velocímetro gráfico en lugar de mostrar el valor textual
         drawSpeedometerGraphic(c.speed);
         // mantenemos la actualización del elemento de velocidad oculto para evitar errores
