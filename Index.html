@@ -477,11 +477,6 @@ const AudioSys = {
     ctx: null,
     engineOsc: null,
     engineGain: null,
-    engineHarmOsc: null,
-    engineHarmGain: null,
-    enginePulseOsc: null,
-    enginePulseGain: null,
-    lastVibrateTime: 0,
     sensorOsc: null,
     sensorGain: null,
     nextBeep: 0,
@@ -500,36 +495,11 @@ const AudioSys = {
                 this.engineOsc = this.ctx.createOscillator();
                 this.engineGain = this.ctx.createGain();
                 this.engineOsc.type = 'sawtooth';
-                this.engineOsc.frequency.value = 60;
-                this.engineGain.gain.value = 0.045;
+                this.engineOsc.frequency.value = 50;
+                this.engineGain.gain.value = 0.05;
                 this.engineOsc.connect(this.engineGain);
                 this.engineGain.connect(this.ctx.destination);
                 this.engineOsc.start();
-            }
-            if (!this.engineHarmOsc) {
-                this.engineHarmOsc = this.ctx.createOscillator();
-                this.engineHarmGain = this.ctx.createGain();
-                this.engineHarmOsc.type = 'triangle';
-                this.engineHarmOsc.frequency.value = 120;
-                this.engineHarmGain.gain.value = 0.02;
-                this.engineHarmOsc.connect(this.engineHarmGain);
-                this.engineHarmGain.connect(this.ctx.destination);
-                this.engineHarmOsc.start();
-            }
-            if (!this.enginePulseOsc) {
-                this.enginePulseOsc = this.ctx.createOscillator();
-                this.enginePulseGain = this.ctx.createGain();
-                const harmonics = new Float32Array(9);
-                for (let i = 1; i <= 8; i += 1) {
-                    harmonics[i] = 1 / i;
-                }
-                const pulseWave = this.ctx.createPeriodicWave(new Float32Array(9), harmonics);
-                this.enginePulseOsc.setPeriodicWave(pulseWave);
-                this.enginePulseOsc.frequency.value = 90;
-                this.enginePulseGain.gain.value = 0.03;
-                this.enginePulseOsc.connect(this.enginePulseGain);
-                this.enginePulseGain.connect(this.ctx.destination);
-                this.enginePulseOsc.start();
             }
             // sensor
             if (!this.sensorOsc) {
@@ -549,36 +519,7 @@ const AudioSys = {
     updateEngine: function(speedRatio) {
         if (this.engineOsc && this.ctx) {
             try {
-                const clampedRatio = Math.max(0, Math.min(1, speedRatio));
-                const rpm = 700 + (clampedRatio * 3800);
-                const firingFreq = (rpm / 60) * 4;
-                const rumbleFreq = Math.max(30, firingFreq * 0.5);
-                this.engineOsc.frequency.setTargetAtTime(rumbleFreq, this.ctx.currentTime, 0.08);
-                if (this.engineHarmOsc) {
-                    this.engineHarmOsc.frequency.setTargetAtTime(firingFreq, this.ctx.currentTime, 0.08);
-                }
-                if (this.enginePulseOsc) {
-                    this.enginePulseOsc.frequency.setTargetAtTime(firingFreq, this.ctx.currentTime, 0.08);
-                }
-                const gainBoost = 0.04 + (clampedRatio * 0.05);
-                this.engineGain.gain.setTargetAtTime(gainBoost, this.ctx.currentTime, 0.08);
-                if (this.engineHarmGain) {
-                    this.engineHarmGain.gain.setTargetAtTime(0.015 + (clampedRatio * 0.02), this.ctx.currentTime, 0.08);
-                }
-                if (this.enginePulseGain) {
-                    this.enginePulseGain.gain.setTargetAtTime(0.02 + (clampedRatio * 0.03), this.ctx.currentTime, 0.08);
-                }
-                if (navigator.vibrate) {
-                    const now = performance.now();
-                    if (clampedRatio < 0.05) {
-                        navigator.vibrate(0);
-                        this.lastVibrateTime = now;
-                    } else if (now - this.lastVibrateTime > 200) {
-                        const duration = Math.round(20 + clampedRatio * 40);
-                        navigator.vibrate(duration);
-                        this.lastVibrateTime = now;
-                    }
-                }
+                this.engineOsc.frequency.setTargetAtTime(50 + (speedRatio * 200), this.ctx.currentTime, 0.1);
             } catch (e) {}
         }
     },
