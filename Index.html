@@ -513,7 +513,11 @@ const AudioSys = {
             if (!this.music) {
                 this.music = new Audio('MueveElMotor.mp3');
                 this.music.loop = true;
+                this.music.preload = 'auto';
+                this.music.autoplay = true;
+                this.music.playsInline = true;
                 this.music.volume = this.musicBaseVolume;
+                this.startMusic();
             }
             // motor
             if (!this.engineOscMain) {
@@ -2167,7 +2171,7 @@ function drawPassiveCar(ctx, x, y, w, h, angle, color) {
 }
 
 // arranque cuando la página ha cargado
-window.onload = () => {
+window.addEventListener('DOMContentLoaded', () => {
     // inicializar referencias al velocímetro
     speedometerCanvas = document.getElementById('speedometer');
     if (speedometerCanvas) {
@@ -2188,7 +2192,7 @@ window.onload = () => {
     document.addEventListener('keydown', unlockAudio, { passive: true });
     document.addEventListener('touchstart', unlockAudio, { passive: true });
     new Game();
-};
+});
 </script>
 </body>
 </html>
