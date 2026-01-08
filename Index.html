@@ -1237,6 +1237,8 @@ class Game {
             this.resetLevel();
             document.getElementById('start-screen').classList.add('hidden');
             this.state = 'PLAY';
+            AudioSys.setMusicDriving(false);
+            AudioSys.startMusic();
         };
         startBtn.addEventListener('click', startGame);
         startBtn.addEventListener('touchstart', startGame, { passive: false });
