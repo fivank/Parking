@@ -10,6 +10,13 @@
             --accent-color: #f39c12;
             --accent-dark: #d35400;
             --glass: rgba(20, 20, 20, 0.9);
+            --steering-size: clamp(150px, 26vw, 220px);
+            --gear-width: clamp(24px, 5vw, 34px);
+            --gear-height: clamp(19px, 4vw, 28px);
+            --pedal-width: clamp(50px, 9vw, 78px);
+            --pedal-height: clamp(68px, 14vw, 108px);
+            --pedal-gear-width: clamp(50px, 9vw, 78px);
+            --pedal-gear-height: clamp(26px, 6vw, 36px);
         }
 
         /* Reset básico */
@@ -75,7 +82,7 @@
         }
 
         .hud-row-secondary {
-            justify-content: flex-start;
+            justify-content: center;
             padding-left: 0.2rem;
         }
 
@@ -120,8 +127,11 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            padding: 0.3rem;
-            padding-bottom: 0.8rem;
+            padding: clamp(0.4rem, 1.8vw, 0.9rem);
+            padding-bottom: clamp(0.7rem, 3vw, 1.4rem);
+            gap: clamp(0.6rem, 2.5vw, 1.8rem);
+            width: min(100%, 980px);
+            margin: 0 auto;
             pointer-events: auto;
         }
 
@@ -129,8 +139,8 @@
         /* Ahora se incrementa un 80% respecto al tamaño ajustado anterior (120px → 216px).
            El fondo se oscurece para mejorar el contraste sobre el suelo claro. */
         .steering-container {
-            width: 216px;
-            height: 216px;
+            width: var(--steering-size);
+            height: var(--steering-size);
             position: relative;
             background: rgba(0,0,0,0.7);
             border-radius: 50%;
@@ -198,7 +208,7 @@
         .right-controls {
             display: flex;
             align-items: flex-end;
-            gap: 0.5rem;
+            gap: clamp(0.5rem, 2vw, 1.4rem);
         }
 
         /* Selector de marchas */
@@ -213,8 +223,8 @@
 
         /* Botones de marchas reducidos al 60 % */
         .gear-btn {
-            width: 24px;
-            height: 19px;
+            width: var(--gear-width);
+            height: var(--gear-height);
             background: #222;
             color: #777;
             font-size: 0.7rem;
@@ -236,8 +246,8 @@
         /* Pedales más anchos: aumentamos su anchura un 70 % respecto a la versión reducida.
            La altura permanece constante. */
         .pedal {
-            width: 51px; /* 30px * 1.7 ≈ 51 */
-            height: 65px; /* altura aumentada un 50 % */
+            width: var(--pedal-width);
+            height: var(--pedal-height);
             /* Pedales oscuros para contrastar con el fondo claro */
             background: linear-gradient(to bottom, #333, #000);
             border: 3px solid #666;
@@ -261,8 +271,8 @@
         }
         /* Ajusta el tamaño de los botones de marcha cuando están encima de los pedales. */
         .pedal-group .gear-btn {
-            width: 51px;
-            height: 28px;
+            width: var(--pedal-gear-width);
+            height: var(--pedal-gear-height);
             font-size: 0.7rem;
             border-radius: 6px;
         }
@@ -383,30 +393,13 @@
             color: var(--accent-color);
         }
 
+        #speedometer {
+            width: clamp(60px, 12vw, 90px);
+            height: clamp(60px, 12vw, 90px);
+        }
+
         /* Responsividad para pantallas pequeñas */
         @media (max-width: 600px) {
-            /* Ajustamos el tamaño de los controles al 60 % también en pantallas pequeñas */
-            .steering-container {
-                width: 162px;
-                height: 162px;
-            }
-            /* Botones de marcha en pantallas pequeñas (aquellos fuera de pedal-group) */
-            .gear-btn {
-                width: 52px;
-                height: 32px;
-                font-size: 0.9rem;
-            }
-            /* Pedales en pantallas pequeñas: incrementamos su anchura un 70 % (40 → 68) y su altura un 50 % */
-            .pedal {
-                width: 68px;
-                height: 86px;
-            }
-            /* Botones de marcha dentro de los grupos de pedales en pantallas pequeñas */
-            .pedal-group .gear-btn {
-                width: 68px;
-                height: 34px;
-                font-size: 1rem;
-            }
             h1 {
                 font-size: 2rem;
             }
@@ -438,7 +431,7 @@
             <!-- Segunda línea superior: velocímetro gráfico -->
             <div class="hud-row hud-row-secondary">
                 <!-- Pequeño velocímetro gráfico: aumentamos ligeramente su tamaño para una mejor visibilidad -->
-                <canvas id="speedometer" width="100" height="100" style="width:70px;height:70px;"></canvas>
+                <canvas id="speedometer" width="100" height="100"></canvas>
             </div>
         </div>
 
