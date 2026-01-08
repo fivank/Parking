@@ -65,14 +65,6 @@
             pointer-events: auto;
         }
 
-        .hud-top-row {
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            flex-wrap: wrap;
-            max-width: 100%;
-        }
-
         .hud-stats {
             font-family: monospace;
             font-size: 0.85rem;
@@ -422,15 +414,15 @@
     <div id="ui-layer">
         <div class="hud-top">
             <!-- Fila superior de información: solo cronómetro, velocímetro y nivel -->
-            <div class="hud-top-row">
-                <!-- Pequeño velocímetro gráfico: aumentamos ligeramente su tamaño para una mejor visibilidad -->
-                <canvas id="speedometer" width="100" height="100" style="width:70px;height:70px;"></canvas>
-                <!-- Muestra el número de nivel actual -->
-                <div id="level-display" class="level-display">Nivel 1</div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <!-- Contenedor de estadísticas minimalista: sólo el temporizador -->
                 <div class="hud-stats">
                     <div id="timer">0.0s</div>
                 </div>
+                <!-- Pequeño velocímetro gráfico: aumentamos ligeramente su tamaño para una mejor visibilidad -->
+                <canvas id="speedometer" width="100" height="100" style="width:70px;height:70px;"></canvas>
+                <!-- Muestra el número de nivel actual -->
+                <div id="level-display" class="level-display">Nivel 1</div>
             </div>
         </div>
 
@@ -858,7 +850,6 @@ const LEVELS = [];
 // Anchura del coche se mantiene igual, mientras que la longitud aumenta un 20% respecto al original (68).
 const CAR_W = 34;
 const CAR_L = 82; // 68 * 1.2 ≈ 81.6, redondeado a 82
-const SPAWN_MARGIN = 12;
 // Factor que determina la relación entre la mitad de la longitud y el eje delantero.
 // Calculado a partir del diseño original: (34 - 10) / 34 ≈ 0.70588.
 const WHEEL_BASE_RATIO = 24 / 34;
@@ -879,7 +870,7 @@ LEVELS.push({
         // obstáculos adicionales para aumentar la dificultad del primer nivel
         { x: 200, y: 350, w: 85, h: 40, c: '#1abc9c', type: 'vehicle', angle: 0 },
         { x: 600, y: 350, w: 85, h: 40, c: '#e67e22', type: 'vehicle', angle: 0 },
-        { x: 240, y: 650, w: 40, h: 80, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 240, y: 650, w: 40, h: 80, c: '#e74c3c', type: 'vehicle', angle: -Math.PI/2 },
         { x: 560, y: 650, w: 40, h: 80, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 }
     ],
     // se mantiene la primera plaza como target para compatibilidad
@@ -903,7 +894,7 @@ LEVELS.push({
         { x: 150, y: 250, w: 40, h: 80, c: '#1abc9c', type: 'vehicle', angle: -Math.PI/2 },
         { x: 250, y: 250, w: 40, h: 80, c: '#e67e22', type: 'vehicle', angle: -Math.PI/2 },
         { x: 450, y: 250, w: 40, h: 80, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
-        { x: 550, y: 250, w: 40, h: 80, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 550, y: 250, w: 40, h: 80, c: '#e74c3c', type: 'vehicle', angle: -Math.PI/2 },
         { x: 650, y: 250, w: 40, h: 80, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
         // Fila inferior de coches estacionados perpendicularmente (todos los huecos llenos)
         { x: 150, y: 550, w: 40, h: 80, c: '#f1c40f', type: 'vehicle', angle: -Math.PI/2 },
@@ -911,7 +902,7 @@ LEVELS.push({
         { x: 350, y: 550, w: 40, h: 80, c: '#8e44ad', type: 'vehicle', angle: -Math.PI/2 },
         { x: 450, y: 550, w: 40, h: 80, c: '#d35400', type: 'vehicle', angle: -Math.PI/2 },
         { x: 550, y: 550, w: 40, h: 80, c: '#2980b9', type: 'vehicle', angle: -Math.PI/2 },
-        { x: 650, y: 550, w: 40, h: 80, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 }
+        { x: 650, y: 550, w: 40, h: 80, c: '#c0392b', type: 'vehicle', angle: -Math.PI/2 }
     ],
     // La plaza libre para aparcar está en la fila superior en x=350, y=250
     target: { x: 350, y: 250, w: 42, h: 85, angle: -Math.PI/2 },
@@ -938,12 +929,12 @@ LEVELS.push({
         { x: 250, y: 200, w: 70, h: 35, c: '#2ecc71', type: 'vehicle', angle: 0 },
         { x: 550, y: 200, w: 70, h: 35, c: '#f1c40f', type: 'vehicle', angle: 0 },
         // obstáculos verticales que estrechan los accesos a los huecos, reducidos en tamaño y desplazados para dejar más espacio
-        { x: 320, y: 250, w: 30, h: 60, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 320, y: 250, w: 30, h: 60, c: '#e74c3c', type: 'vehicle', angle: -Math.PI/2 },
         { x: 480, y: 250, w: 30, h: 60, c: '#8e44ad', type: 'vehicle', angle: -Math.PI/2 },
         { x: 320, y: 400, w: 30, h: 60, c: '#27ae60', type: 'vehicle', angle: -Math.PI/2 },
         { x: 480, y: 400, w: 30, h: 60, c: '#f39c12', type: 'vehicle', angle: -Math.PI/2 },
         { x: 320, y: 550, w: 30, h: 60, c: '#2980b9', type: 'vehicle', angle: -Math.PI/2 },
-        { x: 480, y: 550, w: 30, h: 60, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 }
+        { x: 480, y: 550, w: 30, h: 60, c: '#c0392b', type: 'vehicle', angle: -Math.PI/2 }
     ],
     // huecos de aparcamiento más amplios para facilitar el aparcado
     target: { x: 400, y: 300, w: 110, h: 50, angle: 0 },
@@ -967,13 +958,13 @@ LEVELS.push({
         { x: 170, y: 140, w: 40, h: 85, c: '#8e44ad', type: 'vehicle', angle: -Math.PI/2 },
         { x: 170, y: 260, w: 40, h: 85, c: '#1abc9c', type: 'vehicle', angle: -Math.PI/2 },
         { x: 170, y: 520, w: 40, h: 85, c: '#f39c12', type: 'vehicle', angle: -Math.PI/2 },
-        { x: 170, y: 660, w: 40, h: 85, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 170, y: 660, w: 40, h: 85, c: '#e74c3c', type: 'vehicle', angle: -Math.PI/2 },
         { x: 630, y: 180, w: 40, h: 85, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
         { x: 630, y: 320, w: 40, h: 85, c: '#27ae60', type: 'vehicle', angle: -Math.PI/2 },
         { x: 630, y: 520, w: 40, h: 85, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
         { x: 630, y: 660, w: 40, h: 85, c: '#f1c40f', type: 'vehicle', angle: -Math.PI/2 },
         // coches que sobresalen ligeramente en el pasillo central
-        { x: 320, y: 340, w: 85, h: 40, c: '#9b59b6', type: 'vehicle', angle: 0 },
+        { x: 320, y: 340, w: 85, h: 40, c: '#c0392b', type: 'vehicle', angle: 0 },
         { x: 480, y: 600, w: 85, h: 40, c: '#2980b9', type: 'vehicle', angle: 0 },
         { x: 360, y: 520, w: 40, h: 85, c: '#16a085', type: 'vehicle', angle: -Math.PI / 2 },
         // pivote central que obliga a ajustar la trayectoria
@@ -1004,7 +995,7 @@ LEVELS.push({
         { x: 510, y: 200, w: 90, h: 40, c: '#1abc9c', type: 'vehicle', angle: 0 },
         { x: 650, y: 200, w: 90, h: 40, c: '#f39c12', type: 'vehicle', angle: 0 },
         { x: 190, y: 620, w: 90, h: 40, c: '#3498db', type: 'vehicle', angle: 0 },
-        { x: 330, y: 620, w: 90, h: 40, c: '#9b59b6', type: 'vehicle', angle: 0 },
+        { x: 330, y: 620, w: 90, h: 40, c: '#c0392b', type: 'vehicle', angle: 0 },
         { x: 510, y: 620, w: 90, h: 40, c: '#27ae60', type: 'vehicle', angle: 0 },
         { x: 670, y: 620, w: 90, h: 40, c: '#9b59b6', type: 'vehicle', angle: 0 },
         // coches verticales ligeramente adelantados en las esquinas de los pasillos
@@ -1039,7 +1030,7 @@ LEVELS.push({
         { x: 630, y: 210, w: 40, h: 85, c: '#f39c12', type: 'vehicle', angle: -Math.PI/2 },
         { x: 630, y: 350, w: 40, h: 85, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
         { x: 630, y: 490, w: 40, h: 85, c: '#2ecc71', type: 'vehicle', angle: -Math.PI/2 },
-        { x: 630, y: 630, w: 40, h: 85, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 630, y: 630, w: 40, h: 85, c: '#c0392b', type: 'vehicle', angle: -Math.PI/2 },
         // coches paralelos que se asoman en el pasillo central
         { x: 320, y: 260, w: 90, h: 40, c: '#27ae60', type: 'vehicle', angle: 0 },
         { x: 480, y: 520, w: 90, h: 40, c: '#16a085', type: 'vehicle', angle: 0 },
@@ -1077,13 +1068,13 @@ LEVELS.push({
         { x: 520, y: 660, w: 45, h: 45, c: '#777', type: 'wall' },
         // coches en paralelo junto a las columnas, alineados pero muy cercanos
         { x: 200, y: 240, w: 90, h: 40, c: '#1abc9c', type: 'vehicle', angle: 0 },
-        { x: 600, y: 340, w: 90, h: 40, c: '#3498db', type: 'vehicle', angle: 0 },
+        { x: 600, y: 340, w: 90, h: 40, c: '#e74c3c', type: 'vehicle', angle: 0 },
         { x: 220, y: 500, w: 90, h: 40, c: '#9b59b6', type: 'vehicle', angle: 0 },
         { x: 620, y: 580, w: 90, h: 40, c: '#27ae60', type: 'vehicle', angle: 0 },
         // hileras en batería que simulan un parking lleno con huecos mínimos
         { x: 150, y: 640, w: 40, h: 85, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
         { x: 150, y: 720, w: 40, h: 85, c: '#f39c12', type: 'vehicle', angle: -Math.PI/2 },
-        { x: 650, y: 160, w: 40, h: 85, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 650, y: 160, w: 40, h: 85, c: '#c0392b', type: 'vehicle', angle: -Math.PI/2 },
         { x: 650, y: 260, w: 40, h: 85, c: '#8e44ad', type: 'vehicle', angle: -Math.PI/2 },
         { x: 650, y: 460, w: 40, h: 85, c: '#16a085', type: 'vehicle', angle: -Math.PI/2 },
         { x: 320, y: 700, w: 40, h: 85, c: '#f1c40f', type: 'vehicle', angle: -Math.PI/2 },
@@ -1114,7 +1105,7 @@ LEVELS.push({
         { x: 400, y: 775, w: 800, h: 50, c: '#555', type: 'wall' },
         // hilera superior de coches aparcados paralelos (horizontales) dejando un hueco en x≈350
         { x: 150, y: 250, w: 85, h: 40, c: '#1abc9c', type: 'vehicle', angle: 0 },
-        { x: 250, y: 250, w: 85, h: 40, c: '#3498db', type: 'vehicle', angle: 0 },
+        { x: 250, y: 250, w: 85, h: 40, c: '#e74c3c', type: 'vehicle', angle: 0 },
         { x: 450, y: 250, w: 85, h: 40, c: '#f1c40f', type: 'vehicle', angle: 0 },
         { x: 550, y: 250, w: 85, h: 40, c: '#8e44ad', type: 'vehicle', angle: 0 },
         // hilera inferior de coches aparcados paralelos en la acera opuesta
@@ -1122,7 +1113,7 @@ LEVELS.push({
         { x: 250, y: 550, w: 85, h: 40, c: '#3498db', type: 'vehicle', angle: 0 },
         { x: 350, y: 550, w: 85, h: 40, c: '#e67e22', type: 'vehicle', angle: 0 },
         { x: 450, y: 550, w: 85, h: 40, c: '#2ecc71', type: 'vehicle', angle: 0 },
-        { x: 550, y: 550, w: 85, h: 40, c: '#9b59b6', type: 'vehicle', angle: 0 }
+        { x: 550, y: 550, w: 85, h: 40, c: '#c0392b', type: 'vehicle', angle: 0 }
     ],
     target: { x: 350, y: 250, w: 90, h: 40, angle: 0 },
     targets: [
@@ -1146,7 +1137,7 @@ LEVELS.push({
         { x: 400, y: 25, w: 800, h: 50, c: '#555', type: 'wall' },
         { x: 400, y: 775, w: 800, h: 50, c: '#555', type: 'wall' },
         // hilera izquierda de coches estacionados en vertical (paralelos a la calle)
-        { x: 250, y: 150, w: 40, h: 85, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 250, y: 150, w: 40, h: 85, c: '#e74c3c', type: 'vehicle', angle: -Math.PI/2 },
         { x: 250, y: 250, w: 40, h: 85, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
         { x: 250, y: 450, w: 40, h: 85, c: '#2ecc71', type: 'vehicle', angle: -Math.PI/2 },
         { x: 250, y: 550, w: 40, h: 85, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
@@ -1154,7 +1145,7 @@ LEVELS.push({
         { x: 550, y: 150, w: 40, h: 85, c: '#1abc9c', type: 'vehicle', angle: -Math.PI/2 },
         { x: 550, y: 250, w: 40, h: 85, c: '#f39c12', type: 'vehicle', angle: -Math.PI/2 },
         { x: 550, y: 350, w: 40, h: 85, c: '#8e44ad', type: 'vehicle', angle: -Math.PI/2 },
-        { x: 550, y: 450, w: 40, h: 85, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 550, y: 450, w: 40, h: 85, c: '#c0392b', type: 'vehicle', angle: -Math.PI/2 },
         { x: 550, y: 550, w: 40, h: 85, c: '#e67e22', type: 'vehicle', angle: -Math.PI/2 },
         // coches horizontales que estrechan la calle y obligan a maniobrar
         { x: 400, y: 300, w: 85, h: 40, c: '#16a085', type: 'vehicle', angle: 0 },
@@ -1180,13 +1171,13 @@ LEVELS.push({
         { x: 400, y: 775, w: 800, h: 50, c: '#555', type: 'wall' },
         // hilera izquierda de coches verticales
         { x: 200, y: 150, w: 40, h: 85, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
-        { x: 200, y: 250, w: 40, h: 85, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 200, y: 250, w: 40, h: 85, c: '#e74c3c', type: 'vehicle', angle: -Math.PI/2 },
         { x: 200, y: 450, w: 40, h: 85, c: '#1abc9c', type: 'vehicle', angle: -Math.PI/2 },
         { x: 200, y: 550, w: 40, h: 85, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
         // hilera derecha de coches verticales
         { x: 600, y: 150, w: 40, h: 85, c: '#f39c12', type: 'vehicle', angle: -Math.PI/2 },
         { x: 600, y: 250, w: 40, h: 85, c: '#8e44ad', type: 'vehicle', angle: -Math.PI/2 },
-        { x: 600, y: 350, w: 40, h: 85, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 600, y: 350, w: 40, h: 85, c: '#c0392b', type: 'vehicle', angle: -Math.PI/2 },
         { x: 600, y: 450, w: 40, h: 85, c: '#2ecc71', type: 'vehicle', angle: -Math.PI/2 },
         { x: 600, y: 550, w: 40, h: 85, c: '#16a085', type: 'vehicle', angle: -Math.PI/2 },
         // coches horizontales que estrechan la calle a distintas alturas
@@ -1216,13 +1207,13 @@ LEVELS.push({
         { x: 650, y: 160, w: 90, h: 40, c: '#f1c40f', type: 'vehicle', angle: 0 },
         // hilera central de coches paralelos con hueco objetivo
         { x: 150, y: 400, w: 90, h: 40, c: '#3498db', type: 'vehicle', angle: 0 },
-        { x: 270, y: 400, w: 90, h: 40, c: '#3498db', type: 'vehicle', angle: 0 },
+        { x: 270, y: 400, w: 90, h: 40, c: '#e74c3c', type: 'vehicle', angle: 0 },
         { x: 510, y: 400, w: 90, h: 40, c: '#16a085', type: 'vehicle', angle: 0 },
         { x: 650, y: 400, w: 90, h: 40, c: '#2ecc71', type: 'vehicle', angle: 0 },
         // hilera inferior de coches paralelos
         { x: 150, y: 640, w: 90, h: 40, c: '#8e44ad', type: 'vehicle', angle: 0 },
         { x: 270, y: 640, w: 90, h: 40, c: '#f39c12', type: 'vehicle', angle: 0 },
-        { x: 510, y: 640, w: 90, h: 40, c: '#9b59b6', type: 'vehicle', angle: 0 },
+        { x: 510, y: 640, w: 90, h: 40, c: '#c0392b', type: 'vehicle', angle: 0 },
         { x: 650, y: 640, w: 90, h: 40, c: '#2980b9', type: 'vehicle', angle: 0 },
         // coches verticales que obligan a maniobrar en el carril
         { x: 380, y: 260, w: 40, h: 85, c: '#7f8c8d', type: 'vehicle', angle: -Math.PI / 2 },
@@ -1252,14 +1243,14 @@ LEVELS.push({
         { x: 320, y: 220, w: 40, h: 85, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
         { x: 360, y: 220, w: 40, h: 85, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
         { x: 450, y: 220, w: 40, h: 85, c: '#f1c40f', type: 'vehicle', angle: -Math.PI/2 },
-        { x: 540, y: 220, w: 40, h: 85, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 540, y: 220, w: 40, h: 85, c: '#e74c3c', type: 'vehicle', angle: -Math.PI/2 },
         { x: 630, y: 220, w: 40, h: 85, c: '#16a085', type: 'vehicle', angle: -Math.PI/2 },
         // fila inferior completa
         { x: 140, y: 580, w: 40, h: 85, c: '#8e44ad', type: 'vehicle', angle: -Math.PI/2 },
         { x: 230, y: 580, w: 40, h: 85, c: '#2ecc71', type: 'vehicle', angle: -Math.PI/2 },
         { x: 320, y: 580, w: 40, h: 85, c: '#d35400', type: 'vehicle', angle: -Math.PI/2 },
         { x: 410, y: 580, w: 40, h: 85, c: '#2980b9', type: 'vehicle', angle: -Math.PI/2 },
-        { x: 500, y: 580, w: 40, h: 85, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 500, y: 580, w: 40, h: 85, c: '#c0392b', type: 'vehicle', angle: -Math.PI/2 },
         { x: 590, y: 580, w: 40, h: 85, c: '#27ae60', type: 'vehicle', angle: -Math.PI/2 },
         { x: 680, y: 580, w: 40, h: 85, c: '#f39c12', type: 'vehicle', angle: -Math.PI/2 },
         // coches horizontales para estrechar el pasillo central
@@ -1287,14 +1278,14 @@ LEVELS.push({
         { x: 300, y: 200, w: 40, h: 85, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
         { x: 390, y: 200, w: 40, h: 85, c: '#1abc9c', type: 'vehicle', angle: -Math.PI/2 },
         { x: 480, y: 200, w: 40, h: 85, c: '#f1c40f', type: 'vehicle', angle: -Math.PI/2 },
-        { x: 570, y: 200, w: 40, h: 85, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 570, y: 200, w: 40, h: 85, c: '#e74c3c', type: 'vehicle', angle: -Math.PI/2 },
         { x: 660, y: 200, w: 40, h: 85, c: '#16a085', type: 'vehicle', angle: -Math.PI/2 },
         // fila inferior con hueco muy estrecho
         { x: 120, y: 600, w: 40, h: 85, c: '#8e44ad', type: 'vehicle', angle: -Math.PI/2 },
         { x: 210, y: 600, w: 40, h: 85, c: '#2ecc71', type: 'vehicle', angle: -Math.PI/2 },
         { x: 300, y: 600, w: 40, h: 85, c: '#d35400', type: 'vehicle', angle: -Math.PI/2 },
         { x: 390, y: 600, w: 40, h: 85, c: '#2980b9', type: 'vehicle', angle: -Math.PI/2 },
-        { x: 470, y: 600, w: 40, h: 85, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 470, y: 600, w: 40, h: 85, c: '#c0392b', type: 'vehicle', angle: -Math.PI/2 },
         { x: 560, y: 600, w: 40, h: 85, c: '#27ae60', type: 'vehicle', angle: -Math.PI/2 },
         { x: 650, y: 600, w: 40, h: 85, c: '#f39c12', type: 'vehicle', angle: -Math.PI/2 },
         // coches en el pasillo que reducen el margen de giro
@@ -1327,13 +1318,13 @@ LEVELS.push({
         { x: 640, y: 140, w: 90, h: 40, c: '#2ecc71', type: 'vehicle', angle: 0 },
         // hilera central de coches paralelos con hueco objetivo más justo
         { x: 140, y: 400, w: 90, h: 40, c: '#3498db', type: 'vehicle', angle: 0 },
-        { x: 280, y: 400, w: 90, h: 40, c: '#3498db', type: 'vehicle', angle: 0 },
+        { x: 280, y: 400, w: 90, h: 40, c: '#e74c3c', type: 'vehicle', angle: 0 },
         { x: 500, y: 400, w: 90, h: 40, c: '#16a085', type: 'vehicle', angle: 0 },
         { x: 660, y: 400, w: 90, h: 40, c: '#2980b9', type: 'vehicle', angle: 0 },
         // hilera inferior de coches paralelos
         { x: 120, y: 660, w: 90, h: 40, c: '#8e44ad', type: 'vehicle', angle: 0 },
         { x: 230, y: 660, w: 90, h: 40, c: '#f39c12', type: 'vehicle', angle: 0 },
-        { x: 340, y: 660, w: 90, h: 40, c: '#9b59b6', type: 'vehicle', angle: 0 },
+        { x: 340, y: 660, w: 90, h: 40, c: '#c0392b', type: 'vehicle', angle: 0 },
         { x: 510, y: 660, w: 90, h: 40, c: '#27ae60', type: 'vehicle', angle: 0 },
         { x: 640, y: 660, w: 90, h: 40, c: '#9b59b6', type: 'vehicle', angle: 0 },
         // coches verticales que obligan a maniobrar en el carril central
@@ -1679,7 +1670,6 @@ class Game {
         this.input.brake = 0;
         this.input.gear = 1;
         this.timer = 0;
-        this.applySpawnMargin();
         document.getElementById('timer').innerText = this.timer.toFixed(1) + 's';
         this.inZone = false;
         this.activeTargetIndex = -1;
@@ -1704,42 +1694,6 @@ class Game {
             levelEl.innerText = 'Nivel ' + (this.currentLevelIndex + 1);
         }
         this.prepareIntroSequence();
-    }
-
-    applySpawnMargin() {
-        const carRadius = Math.hypot(CAR_L / 2, CAR_W / 2);
-        const wallInset = 50;
-        const minX = wallInset + carRadius + SPAWN_MARGIN;
-        const maxX = 800 - wallInset - carRadius - SPAWN_MARGIN;
-        const minY = wallInset + carRadius + SPAWN_MARGIN;
-        const maxY = 800 - wallInset - carRadius - SPAWN_MARGIN;
-        let x = Math.min(Math.max(this.car.x, minX), maxX);
-        let y = Math.min(Math.max(this.car.y, minY), maxY);
-        for (let i = 0; i < 8; i++) {
-            let moved = false;
-            for (const obs of this.level.obstacles) {
-                const dx = x - obs.x;
-                const dy = y - obs.y;
-                const dist = Math.hypot(dx, dy);
-                const obsRadius = Math.hypot(obs.w / 2, obs.h / 2);
-                const minDist = carRadius + obsRadius + SPAWN_MARGIN;
-                if (dist < minDist) {
-                    const push = minDist - dist;
-                    const nx = dist === 0 ? 1 : dx / dist;
-                    const ny = dist === 0 ? 0 : dy / dist;
-                    x += nx * push;
-                    y += ny * push;
-                    x = Math.min(Math.max(x, minX), maxX);
-                    y = Math.min(Math.max(y, minY), maxY);
-                    moved = true;
-                }
-            }
-            if (!moved) {
-                break;
-            }
-        }
-        this.car.x = x;
-        this.car.y = y;
     }
 
     prepareIntroSequence() {
@@ -2230,7 +2184,7 @@ class Game {
                 this.ctx.save();
                 this.ctx.translate(this.crashPoint.x, this.crashPoint.y);
                 this.ctx.rotate(this.crashPoint.angle);
-                this.ctx.fillStyle = '#ff0000';
+                this.ctx.fillStyle = '#e74c3c';
                 this.ctx.globalAlpha = blink;
                 const arrowL = 20;
                 const arrowW = 8;
@@ -2300,7 +2254,7 @@ class Game {
             this.ctx.restore();
         }
         // carrocería
-        this.ctx.fillStyle = '#ff0000';
+        this.ctx.fillStyle = '#e74c3c';
         this.ctx.shadowColor = 'black';
         this.ctx.shadowBlur = 10;
         this.ctx.beginPath();
