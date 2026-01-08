@@ -88,20 +88,29 @@
             gap: clamp(0.4rem, 2vw, 1rem);
         }
 
-        .hud-row-speedometer {
+        .hud-item {
+            flex: 1;
             display: flex;
-            justify-content: center;
             align-items: center;
+        }
+
+        .hud-item-left {
+            justify-content: flex-start;
+        }
+
+        .hud-item-center {
+            justify-content: center;
+        }
+
+        .hud-item-right {
+            justify-content: flex-end;
         }
 
         .speedometer-container {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(0, 0, 0, 0.6);
             padding: 0.35rem 0.5rem;
-            border-radius: 10px;
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.35);
         }
 
         .hud-stats {
@@ -439,18 +448,22 @@
 
     <div id="ui-layer">
         <div class="hud-top">
-            <!-- Fila superior de información: cronómetro y nivel -->
+            <!-- Fila superior de información: velocímetro, nivel y cronómetro -->
             <div class="hud-row hud-row-primary">
-                <!-- Muestra el número de nivel actual -->
-                <div id="level-display" class="level-display">Nivel 1</div>
-                <div class="hud-stats">
-                    <div id="timer">0.0s</div>
+                <div class="hud-item hud-item-left">
+                    <!-- Pequeño velocímetro gráfico: aumentamos ligeramente su tamaño para una mejor visibilidad -->
+                    <div class="speedometer-container">
+                        <canvas id="speedometer" width="100" height="100"></canvas>
+                    </div>
                 </div>
-            </div>
-            <div class="hud-row hud-row-speedometer">
-                <!-- Pequeño velocímetro gráfico: aumentamos ligeramente su tamaño para una mejor visibilidad -->
-                <div class="speedometer-container">
-                    <canvas id="speedometer" width="100" height="100"></canvas>
+                <div class="hud-item hud-item-center">
+                    <!-- Muestra el número de nivel actual -->
+                    <div id="level-display" class="level-display">Nivel 1</div>
+                </div>
+                <div class="hud-item hud-item-right">
+                    <div class="hud-stats">
+                        <div id="timer">0.0s</div>
+                    </div>
                 </div>
             </div>
         </div>
