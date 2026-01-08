@@ -456,16 +456,20 @@
         <p>Has superado todos los niveles.</p>
         <div class="score-report">
             <div class="score-row">
-                <div class="score-label">Tiempo medio (0-10)</div>
+                <div class="score-label" id="final-total-label">Total medio (0-10)</div>
+                <div class="star-rating" id="final-total-stars"></div>
+            </div>
+            <div class="score-row">
+                <div class="score-label" id="final-time-label">Tiempo medio (0-10)</div>
                 <div class="star-rating" id="final-time-stars"></div>
             </div>
             <div class="score-row">
-                <div class="score-label">Aparcamiento medio (0-10)</div>
+                <div class="score-label" id="final-parking-label">Aparcamiento medio (0-10)</div>
                 <div class="star-rating" id="final-parking-stars"></div>
             </div>
         </div>
         <!-- Mostramos la puntuación total en la pantalla final -->
-        <div id="final-score-display" style="font-family: monospace; margin-bottom: 0.5rem; color: var(--accent-color);"></div>
+        <div id="final-score-display" style="font-family: monospace; margin-bottom: 0.5rem;"></div>
         <!-- Desglose de puntuaciones por nivel -->
         <div id="final-score-breakdown" style="font-family: monospace; margin-bottom: 1rem; max-height: 40vh; overflow-y: auto;"></div>
         <button class="big-btn" id="restart-btn">REINICIAR</button>
@@ -1989,15 +1993,29 @@ class Game {
                 if (finalScoreEl) {
                     const avgTime = this.totalTimeScore / this.levelTimeScores.length;
                     const avgQuality = this.totalQualityScore / this.levelQualityScores.length;
+                    const avgTotal = (avgTime + avgQuality) / 2;
                     finalScoreEl.innerHTML =
                         'Puntuación total: ' + Math.floor(this.totalScore) + '<br>' +
                         'Puntuación por tiempo: ' + Math.floor(this.totalTimeScore) + '<br>' +
                         'Puntuación por aparcar: ' + Math.floor(this.totalQualityScore) + '<br>' +
                         'Promedio tiempo: ' + avgTime.toFixed(1) + '/10<br>' +
                         'Promedio aparcar: ' + avgQuality.toFixed(1) + '/10';
+                    const finalTotalLabel = document.getElementById('final-total-label');
+                    const finalTimeLabel = document.getElementById('final-time-label');
+                    const finalParkingLabel = document.getElementById('final-parking-label');
+                    if (finalTotalLabel) {
+                        finalTotalLabel.textContent = 'Total medio (0-10): ' + avgTotal.toFixed(1);
+                    }
+                    if (finalTimeLabel) {
+                        finalTimeLabel.textContent = 'Tiempo medio (0-10): ' + avgTime.toFixed(1);
+                    }
+                    if (finalParkingLabel) {
+                        finalParkingLabel.textContent = 'Aparcamiento medio (0-10): ' + avgQuality.toFixed(1);
+                    }
+                    renderStars(document.getElementById('final-total-stars'), avgTotal, 10);
+                    renderStars(document.getElementById('final-time-stars'), avgTime, 10);
+                    renderStars(document.getElementById('final-parking-stars'), avgQuality, 10);
                 }
-                renderStars(document.getElementById('final-time-stars'), this.totalTimeScore / this.levelTimeScores.length, 10);
-                renderStars(document.getElementById('final-parking-stars'), this.totalQualityScore / this.levelQualityScores.length, 10);
                 const finalBreakEl = document.getElementById('final-score-breakdown');
                 if (finalBreakEl) {
                     let html = '';
