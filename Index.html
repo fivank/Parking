@@ -816,7 +816,80 @@ const CAR_L = 82; // 68 * 1.2 ≈ 81.6, redondeado a 82
 // Calculado a partir del diseño original: (34 - 10) / 34 ≈ 0.70588.
 const WHEEL_BASE_RATIO = 24 / 34;
 
-// Nivel 1: aparcamiento frontal (vertical) con dos huecos
+// Nivel 1: aparcamiento en batería con muchos coches y hueco ajustado
+LEVELS.push({
+    obstacles: [
+        // muros perimetrales
+        { x: 25, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 775, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 400, y: 25, w: 800, h: 50, c: '#555', type: 'wall' },
+        { x: 400, y: 775, w: 800, h: 50, c: '#555', type: 'wall' },
+        // fila superior de coches en batería (con un hueco más justo)
+        { x: 140, y: 220, w: 40, h: 85, c: '#1abc9c', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 230, y: 220, w: 40, h: 85, c: '#e67e22', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 320, y: 220, w: 40, h: 85, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 360, y: 220, w: 40, h: 85, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 450, y: 220, w: 40, h: 85, c: '#f1c40f', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 540, y: 220, w: 40, h: 85, c: '#e74c3c', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 630, y: 220, w: 40, h: 85, c: '#16a085', type: 'vehicle', angle: -Math.PI/2 },
+        // fila inferior completa
+        { x: 140, y: 580, w: 40, h: 85, c: '#8e44ad', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 230, y: 580, w: 40, h: 85, c: '#2ecc71', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 320, y: 580, w: 40, h: 85, c: '#d35400', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 410, y: 580, w: 40, h: 85, c: '#2980b9', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 500, y: 580, w: 40, h: 85, c: '#c0392b', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 590, y: 580, w: 40, h: 85, c: '#27ae60', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 680, y: 580, w: 40, h: 85, c: '#f39c12', type: 'vehicle', angle: -Math.PI/2 },
+        // coches horizontales para estrechar el pasillo central
+        { x: 360, y: 420, w: 85, h: 40, c: '#7f8c8d', type: 'vehicle', angle: 0 },
+        { x: 520, y: 420, w: 85, h: 40, c: '#95a5a6', type: 'vehicle', angle: 0 }
+    ],
+    target: { x: 405, y: 220, w: 42, h: 85, angle: -Math.PI/2 },
+    targets: [
+        { x: 405, y: 220, w: 42, h: 85, angle: -Math.PI/2 }
+    ],
+    carStart: { x: 100, y: 400, angle: 0 }
+});
+
+// Nivel 2: aparcamiento en batería aún más denso con hueco muy ajustado
+LEVELS.push({
+    obstacles: [
+        // muros perimetrales
+        { x: 25, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 775, y: 400, w: 50, h: 800, c: '#555', type: 'wall' },
+        { x: 400, y: 25, w: 800, h: 50, c: '#555', type: 'wall' },
+        { x: 400, y: 775, w: 800, h: 50, c: '#555', type: 'wall' },
+        // fila superior muy llena
+        { x: 120, y: 200, w: 40, h: 85, c: '#3498db', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 210, y: 200, w: 40, h: 85, c: '#e67e22', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 300, y: 200, w: 40, h: 85, c: '#9b59b6', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 390, y: 200, w: 40, h: 85, c: '#1abc9c', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 480, y: 200, w: 40, h: 85, c: '#f1c40f', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 570, y: 200, w: 40, h: 85, c: '#e74c3c', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 660, y: 200, w: 40, h: 85, c: '#16a085', type: 'vehicle', angle: -Math.PI/2 },
+        // fila inferior con hueco muy estrecho
+        { x: 120, y: 600, w: 40, h: 85, c: '#8e44ad', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 210, y: 600, w: 40, h: 85, c: '#2ecc71', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 300, y: 600, w: 40, h: 85, c: '#d35400', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 390, y: 600, w: 40, h: 85, c: '#2980b9', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 470, y: 600, w: 40, h: 85, c: '#c0392b', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 560, y: 600, w: 40, h: 85, c: '#27ae60', type: 'vehicle', angle: -Math.PI/2 },
+        { x: 650, y: 600, w: 40, h: 85, c: '#f39c12', type: 'vehicle', angle: -Math.PI/2 },
+        // coches en el pasillo que reducen el margen de giro
+        { x: 360, y: 420, w: 85, h: 40, c: '#7f8c8d', type: 'vehicle', angle: 0 },
+        { x: 520, y: 470, w: 85, h: 40, c: '#95a5a6', type: 'vehicle', angle: 0 },
+        // pivotes para forzar la maniobra
+        { x: 420, y: 520, w: 40, h: 40, c: '#777', type: 'wall' },
+        { x: 500, y: 320, w: 40, h: 40, c: '#777', type: 'wall' }
+    ],
+    target: { x: 510, y: 600, w: 42, h: 85, angle: -Math.PI/2 },
+    targets: [
+        { x: 510, y: 600, w: 42, h: 85, angle: -Math.PI/2 }
+    ],
+    carStart: { x: 90, y: 420, angle: 0 }
+});
+
+// Nivel 3: aparcamiento frontal (vertical) con dos huecos
 LEVELS.push({
     obstacles: [
         // muros perimetrales
@@ -844,7 +917,7 @@ LEVELS.push({
     carStart: { x: 150, y: 550, angle: -Math.PI / 2 }
 });
 
-// Nivel 2: aparcamiento en batería con un solo hueco entre coches en fila. El jugador debe girar 90° para entrar en la plaza.
+// Nivel 4: aparcamiento en batería con un solo hueco entre coches en fila. El jugador debe girar 90° para entrar en la plaza.
 LEVELS.push({
     obstacles: [
         // muros perimetrales
@@ -875,7 +948,7 @@ LEVELS.push({
     carStart: { x: 100, y: 400, angle: 0 }
 });
 
-// Nivel 6: aparcamiento paralelo con tres huecos y pasillos estrechos (ajustado para ser más fácil)
+// Nivel 5: aparcamiento paralelo con tres huecos y pasillos estrechos (ajustado para ser más fácil)
 LEVELS.push({
     obstacles: [
         // muros perimetrales
@@ -908,7 +981,7 @@ LEVELS.push({
     carStart: { x: 400, y: 700, angle: 0 }
 });
 
-// Nivel 7: estacionamiento realista en batería con coches alineados y alguno sobresaliendo ligeramente
+// Nivel 6: estacionamiento realista en batería con coches alineados y alguno sobresaliendo ligeramente
 LEVELS.push({
     obstacles: [
         // muros perimetrales
@@ -943,7 +1016,7 @@ LEVELS.push({
     carStart: { x: 400, y: 700, angle: -Math.PI / 2 }
 });
 
-// Nivel 8: pasillo de parking con coches bien aparcados y pequeños desalineados en los accesos
+// Nivel 7: pasillo de parking con coches bien aparcados y pequeños desalineados en los accesos
 LEVELS.push({
     obstacles: [
         // muros perimetrales
@@ -976,7 +1049,7 @@ LEVELS.push({
     carStart: { x: 130, y: 700, angle: 0 }
 });
 
-// Nivel 9: combinación de batería y paralelo con coches que invaden el carril
+// Nivel 8: combinación de batería y paralelo con coches que invaden el carril
 LEVELS.push({
     obstacles: [
         // muros perimetrales
@@ -1013,7 +1086,7 @@ LEVELS.push({
     carStart: { x: 130, y: 700, angle: -Math.PI / 2 }
 });
 
-// Nivel 10: aparcamiento final con coches correctamente aparcados y pasos forzados entre ellos
+// Nivel 9: aparcamiento final con coches correctamente aparcados y pasos forzados entre ellos
 LEVELS.push({
     obstacles: [
         // muros perimetrales
@@ -1054,7 +1127,7 @@ LEVELS.push({
     carStart: { x: 100, y: 700, angle: -Math.PI / 2 }
 });
 
-// Nivel 3: un reto adicional con más obstáculos y dos huecos
+// Nivel 10: un reto adicional con más obstáculos y dos huecos
 LEVELS.push({
     // Aparcamiento paralelo en una calle con coches aparcados en ambas aceras.  La hilera superior
     // tiene un hueco libre para aparcar en x≈350.  El coche se desplaza horizontalmente desde la
@@ -1086,7 +1159,7 @@ LEVELS.push({
     carStart: { x: 120, y: 400, angle: 0 }
 });
 
-// Nivel 4: aparcamiento paralelo con muchos coches; hueco ampliado y añadido un segundo
+// Nivel 11: aparcamiento paralelo con muchos coches; hueco ampliado y añadido un segundo
 LEVELS.push({
     // Aparcamiento paralelo vertical en una calle estrecha.  Las aceras están a izquierda
     // y derecha y cuentan con hileras de coches estacionados en vertical; hay un hueco
@@ -1120,7 +1193,7 @@ LEVELS.push({
     carStart: { x: 400, y: 700, angle: -Math.PI/2 }
 });
 
-// Nivel 5: aparcamiento frontal con huecos a izquierda y derecha y maniobras adicionales
+// Nivel 12: aparcamiento frontal con huecos a izquierda y derecha y maniobras adicionales
 LEVELS.push({
     // Aparcamiento paralelo en una calle con coches en ambas aceras y varios estrechamientos.
     // La plaza libre está en la hilera izquierda.  El jugador debe avanzar desde el extremo
