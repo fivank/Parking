@@ -521,6 +521,14 @@
             color: #f5f5f5;
         }
 
+        .score-value.levels-count {
+            color: #f1c40f;
+        }
+
+        .crash-overlay {
+            z-index: 100;
+        }
+
         #speedometer {
             width: clamp(60px, 12vw, 90px);
             height: clamp(60px, 12vw, 90px);
@@ -610,10 +618,12 @@
     </div>
 
     <!-- Pantalla de choque -->
-    <div id="gameover-screen" class="screen hidden">
-        <h1 style="color: #e74c3c">¡GOLPE!</h1>
-        <p>Has rozado un obstáculo o muro.</p>
-        <button class="big-btn" id="retry-btn">REINTENTAR</button>
+    <div id="gameover-screen" class="pause-overlay crash-overlay hidden">
+        <div class="pause-dialog">
+            <h1 style="color: #e74c3c">¡GOLPE!</h1>
+            <p>Has rozado un obstáculo o muro.</p>
+            <button class="big-btn" id="retry-btn">REINTENTAR</button>
+        </div>
     </div>
 
     <!-- Pantalla de victoria -->
@@ -631,7 +641,7 @@
             <div class="score-row">
                 <div class="score-label" id="success-levels-label">Niveles superados (1/10)</div>
                 <div class="star-rating" id="success-levels-stars"></div>
-                <div class="score-value" id="success-levels-count"></div>
+                <div class="score-value levels-count" id="success-levels-count"></div>
             </div>
         </div>
         <div id="score-text" style="font-family: monospace; margin-bottom: 1rem;"></div>
@@ -646,21 +656,21 @@
         <p>Has superado todos los niveles.</p>
         <div class="score-report">
             <div class="score-row">
-                <div class="score-label" id="final-total-label">Total medio (0-10)</div>
+                <div class="score-label" id="final-total-label">Puntuación total (0-10)</div>
                 <div class="star-rating" id="final-total-stars"></div>
             </div>
             <div class="score-row">
-                <div class="score-label" id="final-time-label">Tiempo medio (0-10)</div>
+                <div class="score-label" id="final-time-label">Tiempo (0-10)</div>
                 <div class="star-rating" id="final-time-stars"></div>
             </div>
             <div class="score-row">
-                <div class="score-label" id="final-parking-label">Aparcamiento medio (0-10)</div>
+                <div class="score-label" id="final-parking-label">Aparcamiento (0-10)</div>
                 <div class="star-rating" id="final-parking-stars"></div>
             </div>
             <div class="score-row">
                 <div class="score-label" id="final-levels-label">Niveles superados (1/10)</div>
                 <div class="star-rating" id="final-levels-stars"></div>
-                <div class="score-value" id="final-levels-count"></div>
+                <div class="score-value levels-count" id="final-levels-count"></div>
             </div>
         </div>
         <button class="big-btn" id="restart-btn">REINICIAR</button>
@@ -672,21 +682,21 @@
         <p>Te has quedado sin vidas.</p>
         <div class="score-report">
             <div class="score-row">
-                <div class="score-label" id="gameover-total-label">Total medio (0-10)</div>
+                <div class="score-label" id="gameover-total-label">Puntuación total (0-10)</div>
                 <div class="star-rating" id="gameover-total-stars"></div>
             </div>
             <div class="score-row">
-                <div class="score-label" id="gameover-time-label">Tiempo medio (0-10)</div>
+                <div class="score-label" id="gameover-time-label">Tiempo (0-10)</div>
                 <div class="star-rating" id="gameover-time-stars"></div>
             </div>
             <div class="score-row">
-                <div class="score-label" id="gameover-parking-label">Aparcamiento medio (0-10)</div>
+                <div class="score-label" id="gameover-parking-label">Aparcamiento (0-10)</div>
                 <div class="star-rating" id="gameover-parking-stars"></div>
             </div>
             <div class="score-row">
                 <div class="score-label" id="gameover-levels-label">Niveles superados (1/10)</div>
                 <div class="star-rating" id="gameover-levels-stars"></div>
-                <div class="score-value" id="gameover-levels-count"></div>
+                <div class="score-value levels-count" id="gameover-levels-count"></div>
             </div>
         </div>
         <button class="big-btn" id="restart-gameover-btn">REINICIAR</button>
@@ -1724,31 +1734,30 @@ class Game {
         if (totalEl) totalEl.innerText = 'Total: 0';
     }
 
-    getScoreAverages(countOverride = this.levelTimeScores.length) {
-        const count = countOverride;
-        if (count === 0) {
-            return { avgTime: 0, avgQuality: 0, avgTotal: 0 };
-        }
-        const avgTime = this.totalTimeScore / count;
-        const avgQuality = this.totalQualityScore / count;
-        return { avgTime, avgQuality, avgTotal: (avgTime + avgQuality) / 2 };
+    getScoreAverages(completedCount = this.levelTimeScores.length, totalCount = completedCount) {
+        const safeCompleted = completedCount;
+        const safeTotal = totalCount;
+        const avgTime = safeCompleted > 0 ? this.totalTimeScore / safeCompleted : 0;
+        const avgQuality = safeCompleted > 0 ? this.totalQualityScore / safeCompleted : 0;
+        const avgTotal = safeTotal > 0 ? (this.totalTimeScore + this.totalQualityScore) / (2 * safeTotal) : 0;
+        return { avgTime, avgQuality, avgTotal };
     }
 
     updateFinalSummary(prefix) {
-        const countOverride = prefix === 'gameover' ? LEVELS.length : this.levelTimeScores.length;
-        const { avgTime, avgQuality, avgTotal } = this.getScoreAverages(countOverride);
+        const completedCount = this.levelTimeScores.length;
+        const totalCount = prefix === 'gameover' ? LEVELS.length : completedCount;
+        const { avgTime, avgQuality, avgTotal } = this.getScoreAverages(completedCount, totalCount);
         const totalLabel = document.getElementById(`${prefix}-total-label`);
         const timeLabel = document.getElementById(`${prefix}-time-label`);
         const parkingLabel = document.getElementById(`${prefix}-parking-label`);
-        const completedCount = this.levelTimeScores.length;
         if (totalLabel) {
-            totalLabel.textContent = 'Total medio (0-10): ' + avgTotal.toFixed(1);
+            totalLabel.textContent = 'Puntuación total (0-10): ' + avgTotal.toFixed(1);
         }
         if (timeLabel) {
-            timeLabel.textContent = 'Tiempo medio (0-10): ' + avgTime.toFixed(1);
+            timeLabel.textContent = 'Tiempo (0-10): ' + avgTime.toFixed(1);
         }
         if (parkingLabel) {
-            parkingLabel.textContent = 'Aparcamiento medio (0-10): ' + avgQuality.toFixed(1);
+            parkingLabel.textContent = 'Aparcamiento (0-10): ' + avgQuality.toFixed(1);
         }
         renderStars(document.getElementById(`${prefix}-total-stars`), avgTotal, 10);
         renderStars(document.getElementById(`${prefix}-time-stars`), avgTime, 10);
