@@ -337,26 +337,9 @@
         .hidden { display: none !important; }
 
         #start-screen {
-            background: radial-gradient(circle at top, rgba(30, 30, 30, 0.92), rgba(0, 0, 0, 0.98));
-        }
-
-        #start-screen::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, rgba(243, 156, 18, 0.18), transparent 40%);
-            pointer-events: none;
-        }
-
-        .start-card {
-            position: relative;
-            padding: 2rem 2.5rem;
-            border-radius: 18px;
-            background: rgba(15, 15, 15, 0.72);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
-            border: 1px solid rgba(243, 156, 18, 0.25);
-            backdrop-filter: blur(6px);
-            max-width: 520px;
+            background: url('ParkingkingCover.png') center center / cover no-repeat;
+            justify-content: flex-end;
+            padding-bottom: clamp(1.5rem, 5vh, 3rem);
         }
 
         h1 {
@@ -373,9 +356,13 @@
             margin-bottom: 2rem;
         }
 
-        #start-screen p {
-            color: #e2e2e2;
+        #start-screen .big-btn {
+            background: #1e6bff;
+            color: #fff;
+            font-weight: 700;
             font-size: 1rem;
+            padding: 0.6rem 2.4rem;
+            box-shadow: 0 10px 24px rgba(12, 46, 122, 0.4);
         }
 
         .big-btn {
@@ -435,10 +422,6 @@
                 font-size: 1.2rem;
                 padding: 0.6rem 2rem;
             }
-            .start-card {
-                padding: 1.5rem;
-                margin: 0 1.2rem;
-            }
         }
     </style>
 </head>
@@ -493,11 +476,7 @@
 
     <!-- Pantalla inicial -->
     <div id="start-screen" class="screen">
-        <div class="start-card">
-            <h1>Parking king</h1>
-            <p>Conduce hasta la zona verde sin tocar obstáculos.<br>Usa el volante, la marcha correcta y los pedales.</p>
-            <button class="big-btn" id="start-btn">ARRANCAR MOTOR</button>
-        </div>
+        <button class="big-btn" id="start-btn">jugar!</button>
     </div>
 
     <!-- Pantalla de choque -->
