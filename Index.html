@@ -149,6 +149,54 @@
             border-radius: 6px;
         }
 
+        .hud-row-lives {
+            justify-content: center;
+        }
+
+        .lives-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            padding: 0.25rem 0.6rem;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 6px;
+        }
+
+        .life-car {
+            width: 26px;
+            height: 14px;
+            border-radius: 4px;
+            background: linear-gradient(135deg, #f1c40f, #d35400);
+            border: 2px solid #111;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .life-car::before,
+        .life-car::after {
+            content: '';
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #111;
+            border-radius: 50%;
+            bottom: -4px;
+        }
+
+        .life-car::before {
+            left: 2px;
+        }
+
+        .life-car::after {
+            right: 2px;
+        }
+
+        .life-car.lost {
+            opacity: 0.25;
+            filter: grayscale(1);
+        }
+
         /* Zona inferior con controles */
         .controls-area {
             display: flex;
@@ -449,6 +497,11 @@
                     </div>
                 </div>
             </div>
+            <div class="hud-row hud-row-lives">
+                <div class="hud-item hud-item-center">
+                    <div id="lives-display" class="lives-display" aria-label="Vidas restantes"></div>
+                </div>
+            </div>
         </div>
 
         <div class="controls-area">
@@ -528,6 +581,29 @@
         <!-- Desglose de puntuaciones por nivel -->
         <div id="final-score-breakdown" style="font-family: monospace; margin-bottom: 1rem; max-height: 40vh; overflow-y: auto;"></div>
         <button class="big-btn" id="restart-btn">REINICIAR</button>
+    </div>
+
+    <!-- Pantalla final de game over por perder todas las vidas -->
+    <div id="final-gameover-screen" class="screen hidden">
+        <h1 style="color: #e74c3c">GAME OVER</h1>
+        <p>Te has quedado sin vidas.</p>
+        <div class="score-report">
+            <div class="score-row">
+                <div class="score-label" id="gameover-total-label">Total medio (0-10)</div>
+                <div class="star-rating" id="gameover-total-stars"></div>
+            </div>
+            <div class="score-row">
+                <div class="score-label" id="gameover-time-label">Tiempo medio (0-10)</div>
+                <div class="star-rating" id="gameover-time-stars"></div>
+            </div>
+            <div class="score-row">
+                <div class="score-label" id="gameover-parking-label">Aparcamiento medio (0-10)</div>
+                <div class="star-rating" id="gameover-parking-stars"></div>
+            </div>
+        </div>
+        <div id="gameover-score-display" style="font-family: monospace; margin-bottom: 0.5rem;"></div>
+        <div id="gameover-score-breakdown" style="font-family: monospace; margin-bottom: 1rem; max-height: 40vh; overflow-y: auto;"></div>
+        <button class="big-btn" id="restart-gameover-btn">REINICIAR</button>
     </div>
 
 <script>
@@ -1410,8 +1486,12 @@ class Game {
         // listas con las puntuaciones de cada nivel por categoría
         this.levelTimeScores = [];
         this.levelQualityScores = [];
+        // vidas del jugador
+        this.maxLives = 3;
+        this.lives = this.maxLives;
         this.bindControls();
         this.ensureMenuScreen();
+        this.updateLivesDisplay();
         this.resize();
         window.addEventListener('resize', () => this.resize());
         requestAnimationFrame(t => this.loop(t));
@@ -1420,6 +1500,96 @@ class Game {
     resize() {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
+    }
+
+    updateLivesDisplay() {
+        const livesEl = document.getElementById('lives-display');
+        if (!livesEl) return;
+        livesEl.innerHTML = '';
+        for (let i = 0; i < this.maxLives; i++) {
+            const life = document.createElement('div');
+            life.classList.add('life-car');
+            if (i >= this.lives) {
+                life.classList.add('lost');
+            }
+            livesEl.appendChild(life);
+        }
+    }
+
+    resetRunStats() {
+        this.currentLevelIndex = 0;
+        this.level = LEVELS[this.currentLevelIndex];
+        this.totalScore = 0;
+        this.totalTimeScore = 0;
+        this.totalQualityScore = 0;
+        this.levelTimeScores = [];
+        this.levelQualityScores = [];
+        this.lives = this.maxLives;
+        this.updateLivesDisplay();
+        const timeEl = document.getElementById('score-time-hud');
+        const qualEl = document.getElementById('score-quality-hud');
+        const totalEl = document.getElementById('score-total-hud');
+        if (timeEl) timeEl.innerText = 'Tiempo: 0';
+        if (qualEl) qualEl.innerText = 'Aparcar: 0';
+        if (totalEl) totalEl.innerText = 'Total: 0';
+        const finalBreakEl = document.getElementById('final-score-breakdown');
+        if (finalBreakEl) finalBreakEl.innerHTML = '';
+        const gameoverBreakEl = document.getElementById('gameover-score-breakdown');
+        if (gameoverBreakEl) gameoverBreakEl.innerHTML = '';
+    }
+
+    getScoreAverages() {
+        const count = this.levelTimeScores.length;
+        if (count === 0) {
+            return { avgTime: 0, avgQuality: 0, avgTotal: 0 };
+        }
+        const avgTime = this.totalTimeScore / count;
+        const avgQuality = this.totalQualityScore / count;
+        return { avgTime, avgQuality, avgTotal: (avgTime + avgQuality) / 2 };
+    }
+
+    updateFinalSummary(prefix) {
+        const { avgTime, avgQuality, avgTotal } = this.getScoreAverages();
+        const finalScoreEl = document.getElementById(`${prefix}-score-display`);
+        if (finalScoreEl) {
+            finalScoreEl.innerHTML =
+                'Puntuación total: ' + Math.floor(this.totalScore) + '<br>' +
+                'Puntuación por tiempo: ' + Math.floor(this.totalTimeScore) + '<br>' +
+                'Puntuación por aparcar: ' + Math.floor(this.totalQualityScore) + '<br>' +
+                'Promedio tiempo: ' + avgTime.toFixed(1) + '/10<br>' +
+                'Promedio aparcar: ' + avgQuality.toFixed(1) + '/10';
+        }
+        const totalLabel = document.getElementById(`${prefix}-total-label`);
+        const timeLabel = document.getElementById(`${prefix}-time-label`);
+        const parkingLabel = document.getElementById(`${prefix}-parking-label`);
+        if (totalLabel) {
+            totalLabel.textContent = 'Total medio (0-10): ' + avgTotal.toFixed(1);
+        }
+        if (timeLabel) {
+            timeLabel.textContent = 'Tiempo medio (0-10): ' + avgTime.toFixed(1);
+        }
+        if (parkingLabel) {
+            parkingLabel.textContent = 'Aparcamiento medio (0-10): ' + avgQuality.toFixed(1);
+        }
+        renderStars(document.getElementById(`${prefix}-total-stars`), avgTotal, 10);
+        renderStars(document.getElementById(`${prefix}-time-stars`), avgTime, 10);
+        renderStars(document.getElementById(`${prefix}-parking-stars`), avgQuality, 10);
+        const finalBreakEl = document.getElementById(`${prefix}-score-breakdown`);
+        if (finalBreakEl) {
+            let html = '';
+            for (let i = 0; i < this.levelTimeScores.length; i++) {
+                html += 'Nivel ' + (i + 1) + ': Tiempo ' + Math.floor(this.levelTimeScores[i]) +
+                    '/10, Aparcar ' + Math.floor(this.levelQualityScores[i]) +
+                    '/10, Total ' + Math.floor(this.levelTimeScores[i] + this.levelQualityScores[i]) + '<br>';
+            }
+            if (this.levelTimeScores.length > 0) {
+                html += '<hr>';
+            }
+            html += 'Total Tiempo: ' + Math.floor(this.totalTimeScore) + '<br>' +
+                'Total Aparcar: ' + Math.floor(this.totalQualityScore) + '<br>' +
+                'Total General: ' + Math.floor(this.totalScore);
+            finalBreakEl.innerHTML = html;
+        }
     }
 
     bindControls() {
@@ -1433,21 +1603,7 @@ class Game {
             if (e) e.preventDefault();
             resumeAudio();
             // cuando se inicia, siempre volvemos al primer nivel
-            this.currentLevelIndex = 0;
-            this.level = LEVELS[this.currentLevelIndex];
-            // reiniciar las puntuaciones acumuladas
-            this.totalScore = 0;
-            this.totalTimeScore = 0;
-            this.totalQualityScore = 0;
-            this.levelTimeScores = [];
-            this.levelQualityScores = [];
-            // actualizar marcador
-            const timeEl = document.getElementById('score-time-hud');
-            const qualEl = document.getElementById('score-quality-hud');
-            const totalEl = document.getElementById('score-total-hud');
-            if (timeEl) timeEl.innerText = 'Tiempo: 0';
-            if (qualEl) qualEl.innerText = 'Aparcar: 0';
-            if (totalEl) totalEl.innerText = 'Total: 0';
+            this.resetRunStats();
             this.resetLevel();
             document.getElementById('start-screen').classList.add('hidden');
             this.state = 'PLAY';
@@ -1476,24 +1632,23 @@ class Game {
                 const restart = (e) => {
                     if (e) e.preventDefault();
                     // volver al primer nivel y reiniciar
-                    this.currentLevelIndex = 0;
-                    this.level = LEVELS[this.currentLevelIndex];
-                    this.totalScore = 0;
-                    this.totalTimeScore = 0;
-                    this.totalQualityScore = 0;
-                    this.levelTimeScores = [];
-                    this.levelQualityScores = [];
-                    const timeEl = document.getElementById('score-time-hud');
-                    const qualEl = document.getElementById('score-quality-hud');
-                    const totalEl = document.getElementById('score-total-hud');
-                    if (timeEl) timeEl.innerText = 'Tiempo: 0';
-                    if (qualEl) qualEl.innerText = 'Aparcar: 0';
-                    if (totalEl) totalEl.innerText = 'Total: 0';
-                    // limpiar el desglose final
-                    const breakEl = document.getElementById('final-score-breakdown');
-                    if (breakEl) breakEl.innerHTML = '';
+                    this.resetRunStats();
                     this.resetLevel();
                     document.getElementById('end-screen').classList.add('hidden');
+                };
+                el.addEventListener('click', restart);
+                el.addEventListener('touchstart', restart, { passive: false });
+            }
+        }
+        // botón de reinicio en la pantalla de game over final
+        {
+            const el = document.getElementById('restart-gameover-btn');
+            if (el) {
+                const restart = (e) => {
+                    if (e) e.preventDefault();
+                    this.resetRunStats();
+                    this.resetLevel();
+                    document.getElementById('final-gameover-screen').classList.add('hidden');
                 };
                 el.addEventListener('click', restart);
                 el.addEventListener('touchstart', restart, { passive: false });
@@ -1662,8 +1817,9 @@ class Game {
         const crash = document.getElementById('gameover-screen');
         const success = document.getElementById('success-screen');
         const end = document.getElementById('end-screen');
+        const finalGameOver = document.getElementById('final-gameover-screen');
         if (start) start.classList.remove('hidden');
-        [crash, success, end].forEach(el => el && el.classList.add('hidden'));
+        [crash, success, end, finalGameOver].forEach(el => el && el.classList.add('hidden'));
         this.state = 'MENU';
     }
 
@@ -1708,6 +1864,7 @@ class Game {
         document.getElementById('gameover-screen').classList.add('hidden');
         document.getElementById('success-screen').classList.add('hidden');
         document.getElementById('end-screen').classList.add('hidden');
+        document.getElementById('final-gameover-screen').classList.add('hidden');
         this.state = 'PLAY';
         // actualizar indicador de nivel
         const levelEl = document.getElementById('level-display');
@@ -1921,12 +2078,21 @@ class Game {
             this.crashPoint = null;
         }
         if (crash) {
-            this.state = 'GAMEOVER';
+            this.lives = Math.max(0, this.lives - 1);
+            this.updateLivesDisplay();
             AudioSys.setEngineActive(false);
-            // ocultar la pantalla de victoria en caso de choque
+            // ocultar pantallas de éxito/fin en caso de choque
             document.getElementById('success-screen').classList.add('hidden');
             document.getElementById('end-screen').classList.add('hidden');
-            document.getElementById('gameover-screen').classList.remove('hidden');
+            if (this.lives > 0) {
+                this.state = 'GAMEOVER';
+                document.getElementById('gameover-screen').classList.remove('hidden');
+            } else {
+                this.state = 'GAMEOVER_FINAL';
+                document.getElementById('gameover-screen').classList.add('hidden');
+                this.updateFinalSummary('gameover');
+                document.getElementById('final-gameover-screen').classList.remove('hidden');
+            }
         }
         // condición de victoria: comprobar todos los huecos
         let successIndex = -1;
@@ -2044,45 +2210,7 @@ class Game {
                 document.getElementById('success-screen').classList.remove('hidden');
             } else {
                 // mostrar puntuación total y desglose en la pantalla final
-                const finalScoreEl = document.getElementById('final-score-display');
-                if (finalScoreEl) {
-                    const avgTime = this.totalTimeScore / this.levelTimeScores.length;
-                    const avgQuality = this.totalQualityScore / this.levelQualityScores.length;
-                    const avgTotal = (avgTime + avgQuality) / 2;
-                    finalScoreEl.innerHTML =
-                        'Puntuación total: ' + Math.floor(this.totalScore) + '<br>' +
-                        'Puntuación por tiempo: ' + Math.floor(this.totalTimeScore) + '<br>' +
-                        'Puntuación por aparcar: ' + Math.floor(this.totalQualityScore) + '<br>' +
-                        'Promedio tiempo: ' + avgTime.toFixed(1) + '/10<br>' +
-                        'Promedio aparcar: ' + avgQuality.toFixed(1) + '/10';
-                    const finalTotalLabel = document.getElementById('final-total-label');
-                    const finalTimeLabel = document.getElementById('final-time-label');
-                    const finalParkingLabel = document.getElementById('final-parking-label');
-                    if (finalTotalLabel) {
-                        finalTotalLabel.textContent = 'Total medio (0-10): ' + avgTotal.toFixed(1);
-                    }
-                    if (finalTimeLabel) {
-                        finalTimeLabel.textContent = 'Tiempo medio (0-10): ' + avgTime.toFixed(1);
-                    }
-                    if (finalParkingLabel) {
-                        finalParkingLabel.textContent = 'Aparcamiento medio (0-10): ' + avgQuality.toFixed(1);
-                    }
-                    renderStars(document.getElementById('final-total-stars'), avgTotal, 10);
-                    renderStars(document.getElementById('final-time-stars'), avgTime, 10);
-                    renderStars(document.getElementById('final-parking-stars'), avgQuality, 10);
-                }
-                const finalBreakEl = document.getElementById('final-score-breakdown');
-                if (finalBreakEl) {
-                    let html = '';
-                    for (let i = 0; i < this.levelTimeScores.length; i++) {
-                        html += 'Nivel ' + (i + 1) + ': Tiempo ' + Math.floor(this.levelTimeScores[i]) + '/10, Aparcar ' + Math.floor(this.levelQualityScores[i]) + '/10, Total ' + Math.floor(this.levelTimeScores[i] + this.levelQualityScores[i]) + '<br>';
-                    }
-                    html += '<hr>';
-                    html += 'Total Tiempo: ' + Math.floor(this.totalTimeScore) + '<br>';
-                    html += 'Total Aparcar: ' + Math.floor(this.totalQualityScore) + '<br>';
-                    html += 'Total General: ' + Math.floor(this.totalScore);
-                    finalBreakEl.innerHTML = html;
-                }
+                this.updateFinalSummary('final');
                 document.getElementById('end-screen').classList.remove('hidden');
             }
         }
