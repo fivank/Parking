@@ -123,10 +123,62 @@
             background: rgba(0, 0, 0, 0.6);
             padding: 0.4rem 0.6rem;
             border-radius: 6px;
+            align-items: flex-end;
         }
 
         .hud-stats div {
             line-height: 1;
+        }
+
+        .hud-button {
+            background: rgba(20, 20, 20, 0.9);
+            color: #f5f5f5;
+            border: 1px solid #444;
+            border-radius: 999px;
+            font-size: 0.65rem;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            padding: 0.2rem 0.75rem;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .hud-button:active {
+            transform: scale(0.96);
+        }
+
+        .pause-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 90;
+            pointer-events: auto;
+        }
+
+        .pause-dialog {
+            background: rgba(10, 10, 10, 0.65);
+            padding: clamp(1.2rem, 3vw, 1.8rem);
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.9rem;
+            backdrop-filter: blur(4px);
+        }
+
+        .pause-title {
+            font-size: clamp(1.1rem, 3vw, 1.6rem);
+            color: #fff;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+        }
+
+        .pause-resume-btn {
+            font-size: 0.85rem;
+            padding: 0.45rem 1.6rem;
         }
 
         /* Oculta las estadísticas del HUD que ya no se usan (velocidad, marcha y puntuación) */
@@ -504,6 +556,7 @@
                 <div class="hud-item hud-item-right">
                     <div class="hud-stats">
                         <div id="timer">0.0s</div>
+                        <button class="hud-button" id="pause-btn">Pausa</button>
                     </div>
                 </div>
             </div>
@@ -534,6 +587,13 @@
                     <div class="pedal" id="gas-pedal"></div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div id="pause-overlay" class="pause-overlay hidden">
+        <div class="pause-dialog">
+            <div class="pause-title">Juego Pausado</div>
+            <button class="big-btn pause-resume-btn" id="resume-btn">Reanudar</button>
         </div>
     </div>
 
@@ -1449,6 +1509,7 @@ class Game {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         this.state = 'MENU';
+        this.isPaused = false;
         this.lastTime = 0;
         this.input = { gas: 0, brake: 0, steer: 0, gear: 1 };
         this.car = { x: 0, y: 0, angle: 0, speed: 0, steerAngle: 0 };
@@ -1570,6 +1631,7 @@ class Game {
 
     bindControls() {
         const startBtn = document.getElementById('start-btn');
+        const canInteract = () => this.state === 'PLAY' && !this.isPaused;
         const resumeAudio = () => {
             AudioSys.init();
             AudioSys.ensureContext();
@@ -1588,6 +1650,28 @@ class Game {
         };
         startBtn.addEventListener('click', startGame);
         startBtn.addEventListener('touchstart', startGame, { passive: false });
+        const pauseBtn = document.getElementById('pause-btn');
+        const resumeBtn = document.getElementById('resume-btn');
+        const togglePause = (e) => {
+            if (e && e.preventDefault) e.preventDefault();
+            if (this.state !== 'PLAY') return;
+            this.setPaused(!this.isPaused);
+        };
+        if (pauseBtn) {
+            pauseBtn.addEventListener('click', togglePause);
+            pauseBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                togglePause(e);
+            }, { passive: false });
+        }
+        if (resumeBtn) {
+            const resumeGame = (e) => {
+                if (e && e.preventDefault) e.preventDefault();
+                this.setPaused(false);
+            };
+            resumeBtn.addEventListener('click', resumeGame);
+            resumeBtn.addEventListener('touchstart', resumeGame, { passive: false });
+        }
         // reinicio
         const resetBtn = (id) => {
             const el = document.getElementById(id);
@@ -1635,6 +1719,7 @@ class Game {
             const el = document.getElementById(id);
             const on = (e) => {
                 if (e.cancelable) e.preventDefault();
+                if (!canInteract()) return;
                 resumeAudio();
                 this.input[key] = 1;
                 el.classList.add('pressed');
@@ -1649,6 +1734,7 @@ class Game {
         bindPedal('brake-pedal', 'brake');
         // marchas
         const setGear = (g) => {
+            if (!canInteract()) return;
             resumeAudio();
             this.input.gear = g;
             document.getElementById('gear-d').classList.toggle('active', g === 1);
@@ -1708,6 +1794,7 @@ class Game {
         // siempre que no se esté a la derecha del volante (donde están los pedales y la marcha atrás).
         const wheelStart = (e) => {
             if (e.cancelable) e.preventDefault();
+            if (!canInteract()) return;
             resumeAudio();
             const p = e.touches ? e.touches[0] : e;
             const rect = wheelZone.getBoundingClientRect();
@@ -1725,6 +1812,7 @@ class Game {
         // Maneja el movimiento del volante. Si todavía no hay un giro activo y el toque está en la zona
         // válida (anchura del volante y por encima de su parte inferior), activa automáticamente el giro.
         const wheelMove = (e) => {
+            if (!canInteract()) return;
             const p = e.touches ? e.touches[0] : e;
             const rect = wheelZone.getBoundingClientRect();
             const withinHoriz = p.clientX >= rect.left && p.clientX <= rect.right;
@@ -1796,7 +1884,37 @@ class Game {
         const finalGameOver = document.getElementById('final-gameover-screen');
         if (start) start.classList.remove('hidden');
         [crash, success, end, finalGameOver].forEach(el => el && el.classList.add('hidden'));
+        this.setPaused(false);
         this.state = 'MENU';
+    }
+
+    setPaused(paused) {
+        if (this.isPaused === paused) return;
+        this.isPaused = paused;
+        const overlay = document.getElementById('pause-overlay');
+        if (overlay) {
+            overlay.classList.toggle('hidden', !paused);
+        }
+        if (paused) {
+            this.input.gas = 0;
+            this.input.brake = 0;
+            this.input.steer = 0;
+            this.wheelRot = 0;
+            this.wheelActive = false;
+            const gasPedal = document.getElementById('gas-pedal');
+            const brakePedal = document.getElementById('brake-pedal');
+            if (gasPedal) gasPedal.classList.remove('pressed');
+            if (brakePedal) brakePedal.classList.remove('pressed');
+            const wheelEl = document.getElementById('steering-wheel');
+            if (wheelEl) {
+                wheelEl.style.transform = 'rotate(0deg)';
+                wheelEl.classList.remove('active');
+            }
+            const highlightEl = document.getElementById('wheel-highlight');
+            if (highlightEl) {
+                highlightEl.style.opacity = '0';
+            }
+        }
     }
 
     /**
@@ -1841,6 +1959,7 @@ class Game {
         document.getElementById('success-screen').classList.add('hidden');
         document.getElementById('end-screen').classList.add('hidden');
         document.getElementById('final-gameover-screen').classList.add('hidden');
+        this.setPaused(false);
         this.state = 'PLAY';
         // actualizar indicador de nivel
         const levelEl = document.getElementById('level-display');
@@ -1896,6 +2015,11 @@ class Game {
 
     update(dt) {
         if (this.state !== 'PLAY') {
+            AudioSys.setEngineActive(false);
+            AudioSys.setMusicDriving(false);
+            return;
+        }
+        if (this.isPaused) {
             AudioSys.setEngineActive(false);
             AudioSys.setMusicDriving(false);
             return;
