@@ -11,12 +11,12 @@
             --accent-dark: #d35400;
             --glass: rgba(20, 20, 20, 0.9);
             --steering-size: clamp(150px, 26vw, 220px);
-            --gear-width: clamp(24px, 5vw, 34px);
-            --gear-height: clamp(19px, 4vw, 28px);
-            --pedal-width: clamp(50px, 9vw, 78px);
-            --pedal-height: clamp(68px, 14vw, 108px);
-            --pedal-gear-width: clamp(50px, 9vw, 78px);
-            --pedal-gear-height: clamp(26px, 6vw, 36px);
+            --gear-width: calc(1.2 * clamp(24px, 5vw, 34px));
+            --gear-height: calc(1.2 * clamp(19px, 4vw, 28px));
+            --pedal-width: calc(1.2 * clamp(50px, 9vw, 78px));
+            --pedal-height: calc(1.2 * clamp(68px, 14vw, 108px));
+            --pedal-gear-width: calc(1.2 * clamp(50px, 9vw, 78px));
+            --pedal-gear-height: calc(1.2 * clamp(26px, 6vw, 36px));
         }
 
         /* Reset básico */
@@ -202,7 +202,7 @@
         }
 
         .hud-row-lives {
-            justify-content: center;
+            justify-content: space-between;
         }
 
         .lives-display {
@@ -556,13 +556,16 @@
                 <div class="hud-item hud-item-right">
                     <div class="hud-stats">
                         <div id="timer">0.0s</div>
-                        <button class="hud-button" id="pause-btn">Pausa</button>
                     </div>
                 </div>
             </div>
             <div class="hud-row hud-row-lives">
+                <div class="hud-item hud-item-left"></div>
                 <div class="hud-item hud-item-center">
                     <div id="lives-display" class="lives-display" aria-label="Vidas restantes"></div>
+                </div>
+                <div class="hud-item hud-item-right">
+                    <button class="hud-button" id="pause-btn">Pausa</button>
                 </div>
             </div>
         </div>
@@ -690,8 +693,11 @@ const AudioSys = {
     lastVibrateAt: 0,
     music: null,
     musicBaseVolume: 1,
-    musicDrivingVolume: 0.5,
+    musicDrivingVolume: 0.4,
     musicDriving: false,
+    noiseBuffer: null,
+    lastBrakeAt: 0,
+    lastGearAt: 0,
     ensureContext: function() {
         try {
             if (this.ctx && this.ctx.state === 'suspended') {
@@ -717,6 +723,15 @@ const AudioSys = {
                 this.music.playsInline = true;
                 this.music.volume = this.musicBaseVolume;
                 this.startMusic();
+            }
+            if (!this.noiseBuffer && this.ctx) {
+                const length = this.ctx.sampleRate * 2;
+                const buffer = this.ctx.createBuffer(1, length, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < length; i++) {
+                    data[i] = (Math.random() * 2) - 1;
+                }
+                this.noiseBuffer = buffer;
             }
             // motor
             if (!this.engineOscMain) {
@@ -789,6 +804,65 @@ const AudioSys = {
         this.musicDriving = isDriving;
         const targetVolume = isDriving ? this.musicDrivingVolume : this.musicBaseVolume;
         this.music.volume = targetVolume;
+    },
+    playGearShift: function() {
+        if (!this.ctx || !this.noiseBuffer) return;
+        const now = this.ctx.currentTime;
+        if (now - this.lastGearAt < 0.18) return;
+        this.lastGearAt = now;
+        try {
+            this.ensureContext();
+            const source = this.ctx.createBufferSource();
+            source.buffer = this.noiseBuffer;
+            const filter = this.ctx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.value = 1300;
+            filter.Q.value = 0.8;
+            const gain = this.ctx.createGain();
+            gain.gain.setValueAtTime(0.0001, now);
+            gain.gain.exponentialRampToValueAtTime(0.25, now + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+            source.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.ctx.destination);
+            source.start(now);
+            source.stop(now + 0.2);
+            const osc = this.ctx.createOscillator();
+            const oscGain = this.ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(180, now);
+            oscGain.gain.setValueAtTime(0.0001, now);
+            oscGain.gain.exponentialRampToValueAtTime(0.18, now + 0.015);
+            oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+            osc.connect(oscGain);
+            oscGain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.14);
+        } catch (e) {}
+    },
+    playBrake: function() {
+        if (!this.ctx || !this.noiseBuffer) return;
+        const now = this.ctx.currentTime;
+        if (now - this.lastBrakeAt < 0.25) return;
+        this.lastBrakeAt = now;
+        try {
+            this.ensureContext();
+            const source = this.ctx.createBufferSource();
+            source.buffer = this.noiseBuffer;
+            const filter = this.ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 900;
+            filter.Q.value = 0.7;
+            const gain = this.ctx.createGain();
+            gain.gain.setValueAtTime(0.0001, now);
+            gain.gain.exponentialRampToValueAtTime(0.35, now + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+            source.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.ctx.destination);
+            source.start(now);
+            source.stop(now + 0.35);
+        } catch (e) {}
     },
     updateEngine: function(speedRatio) {
         if (this.engineOscMain && this.ctx) {
@@ -1723,6 +1797,9 @@ class Game {
                 resumeAudio();
                 this.input[key] = 1;
                 el.classList.add('pressed');
+                if (key === 'brake') {
+                    AudioSys.playBrake();
+                }
             };
             const off = (e) => { if (e.cancelable) e.preventDefault(); this.input[key] = 0; el.classList.remove('pressed'); };
             el.addEventListener('mousedown', on);
@@ -1736,7 +1813,9 @@ class Game {
         const setGear = (g) => {
             if (!canInteract()) return;
             resumeAudio();
+            if (this.input.gear === g) return;
             this.input.gear = g;
+            AudioSys.playGearShift();
             document.getElementById('gear-d').classList.toggle('active', g === 1);
             document.getElementById('gear-r').classList.toggle('active', g === -1);
             // Actualiza la etiqueta de marcha solo si existe en el DOM (el HUD minimalista ya no la muestra)
