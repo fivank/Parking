@@ -693,8 +693,10 @@ const AudioSys = {
     lastVibrateAt: 0,
     music: null,
     musicBaseVolume: 1,
-    musicDrivingVolume: 0.4,
+    musicDrivingVolume: 0.6,
+    musicPauseFactor: 0.2,
     musicDriving: false,
+    musicPaused: false,
     noiseBuffer: null,
     lastBrakeAt: 0,
     lastGearAt: 0,
@@ -721,7 +723,7 @@ const AudioSys = {
                 this.music.preload = 'auto';
                 this.music.autoplay = true;
                 this.music.playsInline = true;
-                this.music.volume = this.musicBaseVolume;
+                this.updateMusicVolume();
                 this.startMusic();
             }
             if (!this.noiseBuffer && this.ctx) {
@@ -790,6 +792,7 @@ const AudioSys = {
     startMusic: function() {
         if (!this.music) return;
         try {
+            this.updateMusicVolume();
             if (this.music.paused) {
                 const playPromise = this.music.play();
                 if (playPromise && typeof playPromise.catch === 'function') {
@@ -802,7 +805,20 @@ const AudioSys = {
         if (!this.music) return;
         if (this.musicDriving === isDriving) return;
         this.musicDriving = isDriving;
-        const targetVolume = isDriving ? this.musicDrivingVolume : this.musicBaseVolume;
+        this.updateMusicVolume();
+    },
+    setMusicPaused: function(paused) {
+        if (!this.music) return;
+        if (this.musicPaused === paused) return;
+        this.musicPaused = paused;
+        this.updateMusicVolume();
+    },
+    updateMusicVolume: function() {
+        if (!this.music) return;
+        let targetVolume = this.musicDriving ? this.musicDrivingVolume : this.musicBaseVolume;
+        if (this.musicPaused) {
+            targetVolume *= this.musicPauseFactor;
+        }
         this.music.volume = targetVolume;
     },
     playGearShift: function() {
@@ -843,25 +859,39 @@ const AudioSys = {
     playBrake: function() {
         if (!this.ctx || !this.noiseBuffer) return;
         const now = this.ctx.currentTime;
-        if (now - this.lastBrakeAt < 0.25) return;
+        if (now - this.lastBrakeAt < 0.12) return;
         this.lastBrakeAt = now;
         try {
             this.ensureContext();
             const source = this.ctx.createBufferSource();
             source.buffer = this.noiseBuffer;
             const filter = this.ctx.createBiquadFilter();
-            filter.type = 'lowpass';
-            filter.frequency.value = 900;
-            filter.Q.value = 0.7;
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(2200, now);
+            filter.frequency.exponentialRampToValueAtTime(1200, now + 0.4);
+            filter.Q.value = 1.6;
             const gain = this.ctx.createGain();
             gain.gain.setValueAtTime(0.0001, now);
-            gain.gain.exponentialRampToValueAtTime(0.35, now + 0.05);
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+            gain.gain.exponentialRampToValueAtTime(0.4, now + 0.04);
+            gain.gain.exponentialRampToValueAtTime(0.18, now + 0.22);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
             source.connect(filter);
             filter.connect(gain);
             gain.connect(this.ctx.destination);
             source.start(now);
-            source.stop(now + 0.35);
+            source.stop(now + 0.65);
+            const squealOsc = this.ctx.createOscillator();
+            const squealGain = this.ctx.createGain();
+            squealOsc.type = 'triangle';
+            squealOsc.frequency.setValueAtTime(1600, now);
+            squealOsc.frequency.exponentialRampToValueAtTime(900, now + 0.5);
+            squealGain.gain.setValueAtTime(0.0001, now);
+            squealGain.gain.exponentialRampToValueAtTime(0.12, now + 0.06);
+            squealGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+            squealOsc.connect(squealGain);
+            squealGain.connect(this.ctx.destination);
+            squealOsc.start(now);
+            squealOsc.stop(now + 0.62);
         } catch (e) {}
     },
     updateEngine: function(speedRatio) {
@@ -1974,6 +2004,7 @@ class Game {
         if (overlay) {
             overlay.classList.toggle('hidden', !paused);
         }
+        AudioSys.setMusicPaused(paused);
         if (paused) {
             this.input.gas = 0;
             this.input.brake = 0;
@@ -2203,6 +2234,9 @@ class Game {
         AudioSys.setEngineActive(true);
         AudioSys.updateEngine(Math.abs(c.speed) / maxSpeed);
         AudioSys.setMusicDriving(Math.abs(c.speed) > 1);
+        if (this.input.brake && Math.abs(c.speed) > 2) {
+            AudioSys.playBrake();
+        }
         // actualizar velocímetro gráfico en lugar de mostrar el valor textual
         drawSpeedometerGraphic(c.speed);
         // mantenemos la actualización del elemento de velocidad oculto para evitar errores
