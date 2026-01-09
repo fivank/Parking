@@ -516,6 +516,10 @@
             font-weight: bold;
             color: var(--accent-color);
         }
+        .score-value {
+            font-size: 0.9rem;
+            color: #f5f5f5;
+        }
 
         #speedometer {
             width: clamp(60px, 12vw, 90px);
@@ -624,6 +628,11 @@
                 <div class="score-label">Aparcamiento (0-10)</div>
                 <div class="star-rating" id="parking-stars-container"></div>
             </div>
+            <div class="score-row">
+                <div class="score-label" id="success-levels-label">Niveles superados (1/10)</div>
+                <div class="star-rating" id="success-levels-stars"></div>
+                <div class="score-value" id="success-levels-count"></div>
+            </div>
         </div>
         <div id="score-text" style="font-family: monospace; margin-bottom: 1rem;"></div>
         <!-- Mostramos también la puntuación acumulada en esta pantalla -->
@@ -648,6 +657,11 @@
                 <div class="score-label" id="final-parking-label">Aparcamiento medio (0-10)</div>
                 <div class="star-rating" id="final-parking-stars"></div>
             </div>
+            <div class="score-row">
+                <div class="score-label" id="final-levels-label">Niveles superados (1/10)</div>
+                <div class="star-rating" id="final-levels-stars"></div>
+                <div class="score-value" id="final-levels-count"></div>
+            </div>
         </div>
         <button class="big-btn" id="restart-btn">REINICIAR</button>
     </div>
@@ -668,6 +682,11 @@
             <div class="score-row">
                 <div class="score-label" id="gameover-parking-label">Aparcamiento medio (0-10)</div>
                 <div class="star-rating" id="gameover-parking-stars"></div>
+            </div>
+            <div class="score-row">
+                <div class="score-label" id="gameover-levels-label">Niveles superados (1/10)</div>
+                <div class="star-rating" id="gameover-levels-stars"></div>
+                <div class="score-value" id="gameover-levels-count"></div>
             </div>
         </div>
         <button class="big-btn" id="restart-gameover-btn">REINICIAR</button>
@@ -1658,6 +1677,7 @@ class Game {
         // vidas del jugador
         this.maxLives = 3;
         this.lives = this.maxLives;
+        this.pendingFinalSummary = false;
         this.bindControls();
         this.ensureMenuScreen();
         this.updateLivesDisplay();
@@ -1694,6 +1714,7 @@ class Game {
         this.levelTimeScores = [];
         this.levelQualityScores = [];
         this.lives = this.maxLives;
+        this.pendingFinalSummary = false;
         this.updateLivesDisplay();
         const timeEl = document.getElementById('score-time-hud');
         const qualEl = document.getElementById('score-quality-hud');
@@ -1719,6 +1740,7 @@ class Game {
         const totalLabel = document.getElementById(`${prefix}-total-label`);
         const timeLabel = document.getElementById(`${prefix}-time-label`);
         const parkingLabel = document.getElementById(`${prefix}-parking-label`);
+        const completedCount = this.levelTimeScores.length;
         if (totalLabel) {
             totalLabel.textContent = 'Total medio (0-10): ' + avgTotal.toFixed(1);
         }
@@ -1731,6 +1753,22 @@ class Game {
         renderStars(document.getElementById(`${prefix}-total-stars`), avgTotal, 10);
         renderStars(document.getElementById(`${prefix}-time-stars`), avgTime, 10);
         renderStars(document.getElementById(`${prefix}-parking-stars`), avgQuality, 10);
+        this.updateLevelProgressStats(prefix, completedCount);
+    }
+
+    updateLevelProgressStats(prefix, completedCount) {
+        const totalLevels = LEVELS.length;
+        const levelLabel = document.getElementById(`${prefix}-levels-label`);
+        const levelCount = document.getElementById(`${prefix}-levels-count`);
+        const levelStars = document.getElementById(`${prefix}-levels-stars`);
+        const score = totalLevels > 0 ? (completedCount / totalLevels) * 10 : 0;
+        if (levelLabel) {
+            levelLabel.textContent = 'Niveles superados (1/10)';
+        }
+        if (levelCount) {
+            levelCount.textContent = `${completedCount}/${totalLevels}`;
+        }
+        renderStars(levelStars, score, 10);
     }
 
     bindControls() {
@@ -1786,8 +1824,19 @@ class Game {
         // el botón 'next' avanza al siguiente nivel en lugar de reiniciar el mismo
         {
             const el = document.getElementById('next-btn');
-            el.addEventListener('click', () => this.nextLevel());
-            el.addEventListener('touchstart', (e) => { e.preventDefault(); this.nextLevel(); }, { passive: false });
+            const handleNext = (e) => {
+                if (e && e.preventDefault) e.preventDefault();
+                if (this.pendingFinalSummary) {
+                    this.pendingFinalSummary = false;
+                    document.getElementById('success-screen').classList.add('hidden');
+                    this.updateFinalSummary('final');
+                    document.getElementById('end-screen').classList.remove('hidden');
+                    return;
+                }
+                this.nextLevel();
+            };
+            el.addEventListener('click', handleNext);
+            el.addEventListener('touchstart', handleNext, { passive: false });
         }
         // botón de reinicio en la pantalla final
         {
@@ -1795,10 +1844,8 @@ class Game {
             if (el) {
                 const restart = (e) => {
                     if (e) e.preventDefault();
-                    // volver al primer nivel y reiniciar
                     this.resetRunStats();
-                    this.resetLevel();
-                    document.getElementById('end-screen').classList.add('hidden');
+                    this.ensureMenuScreen();
                 };
                 el.addEventListener('click', restart);
                 el.addEventListener('touchstart', restart, { passive: false });
@@ -1811,8 +1858,7 @@ class Game {
                 const restart = (e) => {
                     if (e) e.preventDefault();
                     this.resetRunStats();
-                    this.resetLevel();
-                    document.getElementById('final-gameover-screen').classList.add('hidden');
+                    this.ensureMenuScreen();
                 };
                 el.addEventListener('click', restart);
                 el.addEventListener('touchstart', restart, { passive: false });
@@ -2414,17 +2460,19 @@ class Game {
                     'Promedio aparcar: ' + avgQuality.toFixed(1) + '/10<br>' +
                     'Total acumulado: ' + Math.floor(this.totalScore);
             }
+            this.updateLevelProgressStats('success', this.levelTimeScores.length);
             // ocultar la pantalla de choque si estuviera visible
             document.getElementById('gameover-screen').classList.add('hidden');
             // Mostrar texto del botón según si hay más niveles
             const nextBtn = document.getElementById('next-btn');
             if (this.currentLevelIndex < LEVELS.length - 1) {
                 nextBtn.innerText = 'SIGUIENTE NIVEL';
+                this.pendingFinalSummary = false;
                 document.getElementById('success-screen').classList.remove('hidden');
             } else {
-                // mostrar puntuación total y desglose en la pantalla final
-                this.updateFinalSummary('final');
-                document.getElementById('end-screen').classList.remove('hidden');
+                this.pendingFinalSummary = true;
+                nextBtn.innerText = 'VER RESUMEN';
+                document.getElementById('success-screen').classList.remove('hidden');
             }
         }
     }
