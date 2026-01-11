@@ -361,9 +361,9 @@
         }
 
         #parking-pedal.active {
-            background: #2ecc71;
-            color: #000;
-            box-shadow: 0 0 10px #2ecc71;
+            background: #7a1f1f;
+            color: #fff;
+            box-shadow: 0 0 10px rgba(122, 31, 31, 0.8);
         }
 
         /* Selector de marchas */
@@ -1930,10 +1930,7 @@ class Game {
                 this.setParked(false);
                 return;
             }
-            const stopped = Math.abs(this.car.speed) < 2;
-            if (this.inZone && stopped) {
-                this.setParked(true);
-            }
+            this.setParked(true);
         };
         if (parkingPedal) {
             parkingPedal.addEventListener('click', toggleParking);
@@ -2258,6 +2255,12 @@ class Game {
         }
         document.getElementById('timer').innerText = this.timer.toFixed(1) + 's';
         const c = this.car;
+        const brakeApplied = this.input.brake || this.isParked;
+        const gasApplied = this.isParked ? 0 : this.input.gas;
+        const brakePedalEl = document.getElementById('brake-pedal');
+        if (brakePedalEl) {
+            brakePedalEl.classList.toggle('pressed', brakeApplied);
+        }
         // velocidad máxima reducida a la mitad para ambos sentidos de la marcha
         const maxSpeed = 80;
         // desaceleración y aceleración ajustadas: el vehículo acelera ahora un 30 %
@@ -2268,18 +2271,18 @@ class Game {
         const accel = (200 * 0.7) * 0.35;        // ~49
         const brakeForce = accel * 3.75;        // ~183.75
         // lógica de aceleración y frenado
-        if (this.input.gas) {
+        if (gasApplied) {
             // el objetivo de velocidad depende de la marcha
             const targetSpeed = (this.input.gear === 1) ? maxSpeed : -maxSpeed * 0.6;
             if (c.speed < targetSpeed) c.speed += accel * dt;
             if (c.speed > targetSpeed) c.speed -= accel * dt;
-        } else if (this.input.brake) {
+        } else if (brakeApplied) {
             // freno activo: aplica fuerza de frenado hasta detener el vehículo de manera más gradual
             if (c.speed > 0) c.speed = Math.max(0, c.speed - brakeForce * dt);
             else c.speed = Math.min(0, c.speed + brakeForce * dt);
         }
         // fricción suave: si no se acelera ni se frena, la velocidad decae lentamente
-        if (!this.input.gas && !this.input.brake) {
+        if (!gasApplied && !brakeApplied) {
             // fricción más baja para un decaimiento aún más suave de la velocidad
             c.speed *= 0.999;
             if (Math.abs(c.speed) < 0.3) c.speed = 0;
@@ -2289,7 +2292,7 @@ class Game {
         // aproximadamente un 20 % menos por cada grado de volante.
         const maxSteerRad = Utils.toRad(55);
         // si el volante no está activo y se está acelerando, tender a volver al centro lentamente
-        if (!this.wheelActive && this.input.gas) {
+        if (!this.wheelActive && gasApplied) {
             // el volante vuelve al centro con inercia
             this.wheelRot += (0 - this.wheelRot) * 1.5 * dt;
             // actualizar la rotación visual
@@ -2343,7 +2346,7 @@ class Game {
         AudioSys.setEngineActive(true);
         AudioSys.updateEngine(Math.abs(c.speed) / maxSpeed);
         AudioSys.setMusicDriving(Math.abs(c.speed) > 1);
-        if (this.input.brake && Math.abs(c.speed) > 2) {
+        if (brakeApplied && Math.abs(c.speed) > 2) {
             AudioSys.playBrake();
         }
         // actualizar velocímetro gráfico en lugar de mostrar el valor textual
@@ -2459,9 +2462,6 @@ class Game {
         }
         this.inZone = successIndex >= 0;
         this.activeTargetIndex = successIndex;
-        if (this.isParked && (!this.inZone || Math.abs(c.speed) > 2 || this.input.gas || this.input.brake)) {
-            this.setParked(false);
-        }
         if (this.inZone && Math.abs(c.speed) < 2 && this.isParked) {
             // si habíamos detectado un choque antes, lo ignoramos para la victoria
             this.state = 'WIN';
@@ -2749,7 +2749,7 @@ class Game {
         this.ctx.arc(cl / 2, cw / 3, 3, 0, Math.PI * 2);
         this.ctx.fill();
         // luces traseras
-        this.ctx.fillStyle = this.input.brake ? '#ff0000' : '#550000';
+        this.ctx.fillStyle = (this.input.brake || this.isParked) ? '#ff0000' : '#550000';
         this.ctx.fillRect(-cl / 2 - 1, -cw / 3, 2, 6);
         this.ctx.fillRect(-cl / 2 - 1, cw / 3, 2, 6);
         // ruedas
