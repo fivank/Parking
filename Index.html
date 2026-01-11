@@ -865,51 +865,24 @@ const AudioSys = {
             filter.Q.value = 0.8;
             const gain = this.ctx.createGain();
             gain.gain.setValueAtTime(0.0001, now);
-            gain.gain.exponentialRampToValueAtTime(0.375, now + 0.015);
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.25, now + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
             source.connect(filter);
             filter.connect(gain);
             gain.connect(this.ctx.destination);
             source.start(now);
-            source.stop(now + 0.1);
+            source.stop(now + 0.2);
             const osc = this.ctx.createOscillator();
             const oscGain = this.ctx.createGain();
             osc.type = 'square';
             osc.frequency.setValueAtTime(180, now);
             oscGain.gain.setValueAtTime(0.0001, now);
-            oscGain.gain.exponentialRampToValueAtTime(0.27, now + 0.012);
-            oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+            oscGain.gain.exponentialRampToValueAtTime(0.18, now + 0.015);
+            oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
             osc.connect(oscGain);
             oscGain.connect(this.ctx.destination);
             osc.start(now);
-            osc.stop(now + 0.1);
-            const secondNow = now + 0.09;
-            const secondSource = this.ctx.createBufferSource();
-            secondSource.buffer = this.noiseBuffer;
-            const secondFilter = this.ctx.createBiquadFilter();
-            secondFilter.type = 'bandpass';
-            secondFilter.frequency.value = 1000;
-            secondFilter.Q.value = 0.9;
-            const secondGain = this.ctx.createGain();
-            secondGain.gain.setValueAtTime(0.0001, secondNow);
-            secondGain.gain.exponentialRampToValueAtTime(0.32, secondNow + 0.012);
-            secondGain.gain.exponentialRampToValueAtTime(0.0001, secondNow + 0.08);
-            secondSource.connect(secondFilter);
-            secondFilter.connect(secondGain);
-            secondGain.connect(this.ctx.destination);
-            secondSource.start(secondNow);
-            secondSource.stop(secondNow + 0.1);
-            const secondOsc = this.ctx.createOscillator();
-            const secondOscGain = this.ctx.createGain();
-            secondOsc.type = 'square';
-            secondOsc.frequency.setValueAtTime(140, secondNow);
-            secondOscGain.gain.setValueAtTime(0.0001, secondNow);
-            secondOscGain.gain.exponentialRampToValueAtTime(0.22, secondNow + 0.012);
-            secondOscGain.gain.exponentialRampToValueAtTime(0.0001, secondNow + 0.08);
-            secondOsc.connect(secondOscGain);
-            secondOscGain.connect(this.ctx.destination);
-            secondOsc.start(secondNow);
-            secondOsc.stop(secondNow + 0.1);
+            osc.stop(now + 0.14);
         } catch (e) {}
     },
     playBrake: function() {
@@ -923,30 +896,31 @@ const AudioSys = {
             source.buffer = this.noiseBuffer;
             const filter = this.ctx.createBiquadFilter();
             filter.type = 'bandpass';
-            filter.frequency.setValueAtTime(2000, now);
-            filter.frequency.exponentialRampToValueAtTime(1400, now + 0.08);
-            filter.Q.value = 1.2;
+            filter.frequency.setValueAtTime(2200, now);
+            filter.frequency.exponentialRampToValueAtTime(1200, now + 0.4);
+            filter.Q.value = 1.6;
             const gain = this.ctx.createGain();
             gain.gain.setValueAtTime(0.0001, now);
-            gain.gain.exponentialRampToValueAtTime(0.6, now + 0.02);
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
+            gain.gain.exponentialRampToValueAtTime(0.4, now + 0.04);
+            gain.gain.exponentialRampToValueAtTime(0.18, now + 0.22);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
             source.connect(filter);
             filter.connect(gain);
             gain.connect(this.ctx.destination);
             source.start(now);
-            source.stop(now + 0.12);
+            source.stop(now + 0.65);
             const squealOsc = this.ctx.createOscillator();
             const squealGain = this.ctx.createGain();
             squealOsc.type = 'triangle';
-            squealOsc.frequency.setValueAtTime(1500, now);
-            squealOsc.frequency.exponentialRampToValueAtTime(1000, now + 0.08);
+            squealOsc.frequency.setValueAtTime(1600, now);
+            squealOsc.frequency.exponentialRampToValueAtTime(900, now + 0.5);
             squealGain.gain.setValueAtTime(0.0001, now);
-            squealGain.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
-            squealGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
+            squealGain.gain.exponentialRampToValueAtTime(0.12, now + 0.06);
+            squealGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
             squealOsc.connect(squealGain);
             squealGain.connect(this.ctx.destination);
             squealOsc.start(now);
-            squealOsc.stop(now + 0.12);
+            squealOsc.stop(now + 0.62);
         } catch (e) {}
     },
     updateEngine: function(speedRatio) {
@@ -1006,20 +980,19 @@ const AudioSys = {
     },
     beepSensor: function(dist) {
         if (!this.ctx || !this.sensorGain) return;
+        this.sensorGain.gain.value = 0;
+        return;
         if (dist > 150) {
             this.sensorGain.gain.value = 0;
             return;
         }
         const now = this.ctx.currentTime;
-        const interval = Math.max(0.2, dist / 400);
+        const interval = Math.max(0.15, dist / 500);
         if (!this.nextBeep || now > this.nextBeep) {
             try {
-                // BIP BIP
-                this.sensorGain.gain.setValueAtTime(0.12, now);
-                this.sensorGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-                const secondBeepAt = now + 0.09;
-                this.sensorGain.gain.setValueAtTime(0.12, secondBeepAt);
-                this.sensorGain.gain.exponentialRampToValueAtTime(0.001, secondBeepAt + 0.06);
+                // beep
+                this.sensorGain.gain.setValueAtTime(0.08, now);
+                this.sensorGain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
                 this.nextBeep = now + interval;
             } catch (e) {}
         }
