@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Parking king</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="icon" href="Icons/icon-192-maskable.png" sizes="192x192">
+    <link rel="apple-touch-icon" href="Icons/icon-192-maskable.png" sizes="192x192">
     <style>
         :root {
             /* Color principal para botones y acentos */
@@ -2856,6 +2862,10 @@ function drawPassiveCar(ctx, x, y, w, h, angle, color) {
 
 // arranque cuando la página ha cargado
 window.addEventListener('DOMContentLoaded', () => {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./2)%20service-worker.js')
+            .catch((error) => console.error('Service worker registration failed:', error));
+    }
     // inicializar referencias al velocímetro
     speedometerCanvas = document.getElementById('speedometer');
     if (speedometerCanvas) {

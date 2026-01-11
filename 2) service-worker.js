@@ -5,7 +5,8 @@ const ASSETS = [
   './manifest.json',
   './ParkingkingCover.png',
   './MueveElMotor.mp3',
-  './icons/icon-1024x1536.png'
+  './Icons/icon-192-maskable.png',
+  './Icons/icon-512-maskable.png'
 ];
 
 self.addEventListener('install', (event) => {
