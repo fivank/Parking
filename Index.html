@@ -343,8 +343,27 @@
         /* Controles derechos: marchas y pedales */
         .right-controls {
             display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .pedal-row {
+            display: flex;
             align-items: flex-end;
             gap: clamp(0.5rem, 2vw, 1.4rem);
+        }
+
+        .parking-pedal-row {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        #parking-pedal.active {
+            background: #2ecc71;
+            color: #000;
+            box-shadow: 0 0 10px #2ecc71;
         }
 
         /* Selector de marchas */
@@ -591,15 +610,20 @@
             </div>
 
             <div class="right-controls">
-                <!-- Grupo de freno: marcha atrás encima del pedal (a la izquierda) -->
-                <div class="pedal-group">
-                    <div class="gear-btn" id="gear-r">R</div>
-                    <div class="pedal" id="brake-pedal"></div>
+                <div class="parking-pedal-row">
+                    <div class="gear-btn" id="parking-pedal" aria-label="Aparcado">P</div>
                 </div>
-                <!-- Grupo de acelerador: marcha adelante encima del pedal (a la derecha) -->
-                <div class="pedal-group">
-                    <div class="gear-btn active" id="gear-d">D</div>
-                    <div class="pedal" id="gas-pedal"></div>
+                <div class="pedal-row">
+                    <!-- Grupo de freno: marcha atrás encima del pedal (a la izquierda) -->
+                    <div class="pedal-group">
+                        <div class="gear-btn" id="gear-r">R</div>
+                        <div class="pedal" id="brake-pedal"></div>
+                    </div>
+                    <!-- Grupo de acelerador: marcha adelante encima del pedal (a la derecha) -->
+                    <div class="pedal-group">
+                        <div class="gear-btn active" id="gear-d">D</div>
+                        <div class="pedal" id="gas-pedal"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -729,6 +753,7 @@ const AudioSys = {
     noiseBuffer: null,
     lastBrakeAt: 0,
     lastGearAt: 0,
+    carSoundBoost: 2,
     ensureContext: function() {
         try {
             if (this.ctx && this.ctx.state === 'suspended') {
@@ -784,7 +809,7 @@ const AudioSys = {
                 this.engineLfoOsc.type = 'sine';
                 this.engineLfoOsc.frequency.value = 2;
                 this.engineLfoGain.gain.value = 4;
-                this.engineGain.gain.value = 0.05;
+                this.engineGain.gain.value = 0.05 * this.carSoundBoost;
                 this.engineMainGain.gain.value = 0.7;
                 this.engineHarmGain.gain.value = 0.25;
                 this.engineSubGain.gain.value = 0.35;
@@ -865,7 +890,7 @@ const AudioSys = {
             filter.Q.value = 0.8;
             const gain = this.ctx.createGain();
             gain.gain.setValueAtTime(0.0001, now);
-            gain.gain.exponentialRampToValueAtTime(0.25, now + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.25 * this.carSoundBoost, now + 0.02);
             gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
             source.connect(filter);
             filter.connect(gain);
@@ -877,7 +902,7 @@ const AudioSys = {
             osc.type = 'square';
             osc.frequency.setValueAtTime(180, now);
             oscGain.gain.setValueAtTime(0.0001, now);
-            oscGain.gain.exponentialRampToValueAtTime(0.18, now + 0.015);
+            oscGain.gain.exponentialRampToValueAtTime(0.18 * this.carSoundBoost, now + 0.015);
             oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
             osc.connect(oscGain);
             oscGain.connect(this.ctx.destination);
@@ -901,8 +926,8 @@ const AudioSys = {
             filter.Q.value = 1.6;
             const gain = this.ctx.createGain();
             gain.gain.setValueAtTime(0.0001, now);
-            gain.gain.exponentialRampToValueAtTime(0.4, now + 0.04);
-            gain.gain.exponentialRampToValueAtTime(0.18, now + 0.22);
+            gain.gain.exponentialRampToValueAtTime(0.4 * this.carSoundBoost, now + 0.04);
+            gain.gain.exponentialRampToValueAtTime(0.18 * this.carSoundBoost, now + 0.22);
             gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
             source.connect(filter);
             filter.connect(gain);
@@ -915,7 +940,7 @@ const AudioSys = {
             squealOsc.frequency.setValueAtTime(1600, now);
             squealOsc.frequency.exponentialRampToValueAtTime(900, now + 0.5);
             squealGain.gain.setValueAtTime(0.0001, now);
-            squealGain.gain.exponentialRampToValueAtTime(0.12, now + 0.06);
+            squealGain.gain.exponentialRampToValueAtTime(0.12 * this.carSoundBoost, now + 0.06);
             squealGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
             squealOsc.connect(squealGain);
             squealGain.connect(this.ctx.destination);
@@ -936,7 +961,7 @@ const AudioSys = {
                 this.engineOscMain.frequency.setTargetAtTime(mainHz, this.ctx.currentTime, 0.08);
                 this.engineOscHarm.frequency.setTargetAtTime(mainHz * 2, this.ctx.currentTime, 0.08);
                 this.engineOscSub.frequency.setTargetAtTime(mainHz * 0.5, this.ctx.currentTime, 0.08);
-                const targetGain = 0.03 + (clamped * 0.03);
+                const targetGain = (0.03 + (clamped * 0.03)) * this.carSoundBoost;
                 this.engineGain.gain.setTargetAtTime(targetGain, this.ctx.currentTime, 0.12);
                 if (this.engineLfoOsc && this.engineLfoGain) {
                     const vibratoRate = 0.9 + (clamped * 3.2);
@@ -1654,6 +1679,7 @@ class Game {
         this.timer = 0;
         this.inZone = false;
         this.activeTargetIndex = -1; // índice del hueco en el que estamos
+        this.isParked = false;
         this.crashPoint = null; // punto de impacto para mostrar flecha en caso de choque
         this.spawnGrace = 0; // tiempo de gracia tras aparecer para ignorar choques iniciales
         this.intro = {
@@ -1894,6 +1920,25 @@ class Game {
         };
         bindPedal('gas-pedal', 'gas');
         bindPedal('brake-pedal', 'brake');
+        // pedal de aparcado
+        const parkingPedal = document.getElementById('parking-pedal');
+        const toggleParking = (e) => {
+            if (e && e.preventDefault) e.preventDefault();
+            if (!canInteract()) return;
+            resumeAudio();
+            if (this.isParked) {
+                this.setParked(false);
+                return;
+            }
+            const stopped = Math.abs(this.car.speed) < 2;
+            if (this.inZone && stopped) {
+                this.setParked(true);
+            }
+        };
+        if (parkingPedal) {
+            parkingPedal.addEventListener('click', toggleParking);
+            parkingPedal.addEventListener('touchstart', toggleParking, { passive: false });
+        }
         // marchas
         const setGear = (g) => {
             if (!canInteract()) return;
@@ -2109,6 +2154,7 @@ class Game {
         document.getElementById('timer').innerText = this.timer.toFixed(1) + 's';
         this.inZone = false;
         this.activeTargetIndex = -1;
+        this.setParked(false);
         this.crashPoint = null;
         this.spawnGrace = 0.75; // pequeña ventana para evitar choques inmediatos al cargar
         this.wheelRot = 0;
@@ -2148,6 +2194,14 @@ class Game {
         this.cam.zoom = overviewZoom;
         this.cam.x = levelCenter;
         this.cam.y = levelCenter;
+    }
+
+    setParked(parked) {
+        this.isParked = parked;
+        const parkingPedal = document.getElementById('parking-pedal');
+        if (parkingPedal) {
+            parkingPedal.classList.toggle('active', parked);
+        }
     }
 
     getOverviewZoom() {
@@ -2405,7 +2459,10 @@ class Game {
         }
         this.inZone = successIndex >= 0;
         this.activeTargetIndex = successIndex;
-        if (this.inZone && Math.abs(c.speed) < 2) {
+        if (this.isParked && (!this.inZone || Math.abs(c.speed) > 2 || this.input.gas || this.input.brake)) {
+            this.setParked(false);
+        }
+        if (this.inZone && Math.abs(c.speed) < 2 && this.isParked) {
             // si habíamos detectado un choque antes, lo ignoramos para la victoria
             this.state = 'WIN';
             AudioSys.setEngineActive(false);
